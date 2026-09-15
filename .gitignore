@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+
+# Node
+node_modules/
+.next/
+
+# IDE
+.vscode/
+
+# Testing
+.pytest_cache/
+.coverage
