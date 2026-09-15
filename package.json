@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "mtga-log-parser": "^4.1.0"
+  }
+}
