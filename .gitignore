@@ -17,6 +17,8 @@ node_modules/
 # Testing
 .pytest_cache/
 .coverage
+
+# mtga-cards-database-generator generated files
 mtga-cards-database-generator/node_modules
 mtga-cards-database-generator/dist
 mtga-cards-database-generator/external
