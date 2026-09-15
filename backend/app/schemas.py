@@ -83,6 +83,47 @@ class MatchIngestResponse(MatchTelemetryV1):
     raw_payload: dict[str, Any]
 
 
+class DeckPerformance(TelemetryBase):
+    deck: str
+    matches: int = Field(ge=0)
+    wins: int = Field(ge=0)
+    losses: int = Field(ge=0)
+    winrate: float = Field(ge=0.0, le=1.0)
+
+
+class AnalyticsOverviewResponse(TelemetryBase):
+    total_matches: int = Field(ge=0)
+    rated_matches: int = Field(ge=0)
+    overall_winrate: float = Field(ge=0.0, le=1.0)
+    favorite_deck: str | None = None
+    best_deck: str | None = None
+    deck_performance: list[DeckPerformance] = Field(default_factory=list)
+
+
+class PlayDrawPerformance(TelemetryBase):
+    matches: int = Field(ge=0)
+    wins: int = Field(ge=0)
+    losses: int = Field(ge=0)
+    winrate: float = Field(ge=0.0, le=1.0)
+
+
+class MatchupPerformance(TelemetryBase):
+    opponent_deck: str
+    matches: int = Field(ge=0)
+    wins: int = Field(ge=0)
+    losses: int = Field(ge=0)
+    rated_matches: int = Field(ge=0)
+    winrate: float = Field(ge=0.0, le=1.0)
+    on_play: PlayDrawPerformance
+    on_draw: PlayDrawPerformance
+
+
+class MatchupsResponse(TelemetryBase):
+    deck: str | None = None
+    total_matchups: int = Field(ge=0)
+    matchups: list[MatchupPerformance] = Field(default_factory=list)
+
+
 class CardCreate(TelemetryBase):
     card_id: str = Field(min_length=1, max_length=128)
     card_name: str = Field(min_length=1, max_length=256)
