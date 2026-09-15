@@ -13,4 +13,4 @@ RUN mkdir -p /app/output
 
 VOLUME ["/app/output"]
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm run tsc && node dist/updateSets.js && npm start"]
