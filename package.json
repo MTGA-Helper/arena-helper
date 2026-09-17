@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "better-sqlite3": "^11.10.0",
     "mtga-log-parser": "^4.1.0"
   }
 }
