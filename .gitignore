@@ -23,3 +23,9 @@ mtga-cards-database-generator/node_modules
 mtga-cards-database-generator/dist
 mtga-cards-database-generator/external
 mtga-cards-database-generator/output
+
+# mtga-log-parser generated files
+mtga-log-parser/node_modules
+mtga-log-parser/dist
+mtga-log-parser/external
+mtga-log-parser/output
