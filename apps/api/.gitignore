@@ -22,3 +22,8 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local collection and generated diagnostic exports
+collection.csv
+unmatched_cards.csv
+
