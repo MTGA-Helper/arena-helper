@@ -1,11 +1,11 @@
 ﻿# -*- coding: utf-8 -*-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
-from sqlalchemy import join
 from uuid import UUID
 
 from database import AsyncSessionLocal
 from models import Deck, DeckCard, UserCollection, Card, CardPrint
+from services.next_action_service import get_next_action
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -25,21 +25,18 @@ async def get_current_user_id() -> UUID:
 @router.get("/decks")
 async def get_deck_recommendations(user_id: UUID = Depends(get_current_user_id)):
     async with AsyncSessionLocal() as session:
-        # 1. Fetch user collection map: {card_id: quantity}
         coll_res = await session.execute(
             select(UserCollection.card_id, UserCollection.quantity)
             .where(UserCollection.user_id == user_id)
         )
         user_collection = {row.card_id: row.quantity for row in coll_res.all()}
 
-        # 2. Fetch all decks and their required cards
         decks_res = await session.execute(select(Deck))
         decks = decks_res.scalars().all()
 
         recommendations = []
 
         for deck in decks:
-            # Fetch cards associated with this deck, joining with Card and CardPrint for rarity
             dc_res = await session.execute(
                 select(DeckCard.card_id, DeckCard.quantity, Card.name, CardPrint.rarity)
                 .join(Card, DeckCard.card_id == Card.id)
@@ -75,8 +72,6 @@ async def get_deck_recommendations(user_id: UUID = Depends(get_current_user_id))
                         mythic_wc += deficit
 
             completion_percent = (total_owned / total_required * 100.0) if total_required > 0 else 0.0
-            
-            # Ranking formula V1: (completion_percent * 0.70) + (winrate * 0.30)
             base_winrate = deck.winrate or 50.0
             rank_score = (completion_percent * 0.70) + (base_winrate * 0.30)
 
@@ -97,7 +92,9 @@ async def get_deck_recommendations(user_id: UUID = Depends(get_current_user_id))
                 "rank_score": rank_score
             })
 
-        # Sort recommendations by rank score descending
         recommendations.sort(key=lambda x: x["rank_score"], reverse=True)
-
         return recommendations
+
+@router.get("/next-action")
+async def next_action_endpoint():
+    return await get_next_action()
