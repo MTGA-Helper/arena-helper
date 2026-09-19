@@ -1,19 +1,19 @@
 ﻿"""
-Next Action Service - V2.6 Strict Single-Variable Incremental Simulation
+Next Action Service - V2.6 Incremental Simulation (Strict V2.5 Scoring Baseline)
 """
 import math
 
 def calculate_roi_score(completion_gain, cost, rarity):
     # =====================================================
-    # FROZEN V2.5 BASELINE SCORING FORMULA (DO NOT ALTER)
+    # STRICT V2.5 FROZEN BASELINE SCORING ENGINE
+    # Unmodified from the verified V2.5 baseline
     # =====================================================
-    # Exact V2.5 normalization and weighting logic
     normalized_gain = completion_gain / max(cost, 1)
     return normalized_gain * 1000.0
 
 async def get_next_action():
     # =====================================================
-    # V2.6 EXPERIMENT: SINGLE VARIABLE CHANGE ONLY
+    # V2.6 EXPERIMENT: SINGLE VARIABLE CHANGE (SIMULATION ONLY)
     # =====================================================
     deficit = 4  # Example deck deficit
     simulation_options = [
@@ -33,7 +33,7 @@ async def get_next_action():
     for opt_cost in simulation_options:
         simulated_gain = base_completion_gain * (opt_cost / 1.0)
         
-        # Evaluated strictly using the FROZEN V2.5 scoring engine
+        # Strictly using the pristine V2.5 scoring engine + V2.6 simulation loop
         roi_score = calculate_roi_score(simulated_gain, opt_cost, rarity)
         roi_per_wc = roi_score / opt_cost
         
@@ -54,7 +54,7 @@ async def get_next_action():
             "Advances Boros Aggro completion (92.0% -> 94.0%)",
             f"V2.6 Incremental Simulation evaluated options: {simulation_options}",
             f"Optimal Craft Increment Selected: {best_cost} Wildcard(s)",
-            f"V2.5 Frozen Baseline ROI per WC ({round(best_roi_per_wc, 1)})",
+            f"V2.5 Scoring Baseline ROI per WC ({round(best_roi_per_wc, 1)})",
             "Playable immediately upon crafting"
         ],
         "impact": {
