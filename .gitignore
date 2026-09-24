@@ -29,3 +29,8 @@ unmatched_cards.csv
 Thumbs.db
 .vscode/
 .idea/
+
+# Environment & Node Modules
+/.env
+/.env.*
+/node_modules/
