@@ -1,0 +1,23 @@
+﻿ARENA HELPER
+Decision Intelligence Platform
+
+Original Author:
+owlensteed
+
+Project Start:
+2026
+
+Purpose:
+Decision Intelligence Platform for MTGA
+
+Core Components:
+- FastAPI API
+- SQLite Knowledge Graph
+- Collection Synchronization
+- Telemetry Ingestion
+- Evidence-Based Recommendations
+
+Authoritative Handoff Location:
+\\BILLS-FLEXBOOK\MTGA Project Folder
+
+This project and architecture were created and maintained by owlensteed.

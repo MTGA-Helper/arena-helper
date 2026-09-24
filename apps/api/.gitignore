@@ -1,29 +1,8 @@
-﻿# Python
+.env
 __pycache__/
 *.pyc
-.venv/
-venv/
-env/
-
-# Environment
-.env
-.env.*
-
-# Logs
+*.pyo
+backup_*
 *.log
-
-# Database
-*.db
-
-# IDE
 .vscode/
 .idea/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Local collection and generated diagnostic exports
-collection.csv
-unmatched_cards.csv
-

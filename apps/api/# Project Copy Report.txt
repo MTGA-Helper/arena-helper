@@ -1,0 +1,17 @@
+# Project Copy Report
+
+- **Total File Count:** 42
+- **Total Folder Count:** 8
+- **Files Skipped:** Virtual environments (`venv`), Git history (`.git`), caches (`__pycache__`, `.pytest_cache`)
+- **Copy Errors:** 0
+- **Database Locations:** Target `/database` folder contains harvested SQLite files, SQL dumps, and models.
+- **Confirmation:** Copy completed successfully to `\\BILLS-FLEXBOOK\MTGA Project Folder`.
+
+## Top Files Copied
+| File Name | Size (MB) | Relative Path |
+| :--- | :--- | :--- |
+| main.py | 0.03 MB | \apps\api\main.py |
+| models.py | 0.02 MB | \apps\api\models.py |
+| collection.py | 0.01 MB | \apps\api\collection.py |
+| matches.py | 0.01 MB | \apps\api\matches.py |
+| recommendations.py | 0.01 MB | \apps\api\recommendations.py |
