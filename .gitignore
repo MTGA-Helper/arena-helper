@@ -1,31 +1,31 @@
-# Python
+﻿# Python / Virtual Environments
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.sqlite
+*.sqlite3
+*.db
 
-# Environment
-.env
-.env.local
+# Runtime Logs & Telemetry Data
+*.log
+*.txt
+!README.md
+!requirements.txt
+GREEvents.txt
+MTGAEvents.txt
+MTGAMatchEvents.txt
+MTGAWinsLosses.txt
+PlayerLogMatches.txt
 
-# Node
-node_modules/
-.next/
+# Reports & Databases
+engine_graph.db
+MatchReport.json
+MatchReports/
+collection.csv
+unmatched_cards.csv
 
-# IDE
+# OS Files
+.DS_Store
+Thumbs.db
 .vscode/
-
-# Testing
-.pytest_cache/
-.coverage
-
-# mtga-cards-database-generator generated files
-mtga-cards-database-generator/node_modules
-mtga-cards-database-generator/dist
-mtga-cards-database-generator/external
-mtga-cards-database-generator/output
-
-# mtga-log-parser generated files
-mtga-log-parser/node_modules
-mtga-log-parser/dist
-mtga-log-parser/external
-mtga-log-parser/output
+.idea/
