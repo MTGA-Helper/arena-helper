@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 app = FastAPI(
     title="Arena Helper API",
-    version="1.1.1",
-    description="Engine-centric TCG decision intelligence platform with robust telemetry foreign keys."
+    version="1.2.0",
+    description="Engine-centric TCG decision intelligence platform with telemetry and health monitoring."
 )
 
 app.add_middleware(
@@ -22,15 +22,16 @@ app.add_middleware(
 def get_db():
     conn = sqlite3.connect("engine_graph.db")
     conn.row_factory = sqlite3.Row
-    # Enable foreign key enforcement in SQLite
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
-# Initialize Telemetry table with engine_id foreign key relationship
+# Rebuild telemetry table cleanly to ensure engine_id foreign key schema
 def init_db():
     conn = get_db()
+    # Drop old deck_slug telemetry table if it exists to cleanly migrate to foreign key model
+    conn.execute("DROP TABLE IF EXISTS telemetry;")
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS telemetry (
+        CREATE TABLE telemetry (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             engine_id INTEGER NOT NULL,
             result TEXT NOT NULL,
@@ -51,6 +52,23 @@ class TelemetryPayload(BaseModel):
     turns: Optional[int] = 8
     opponent_archetype: Optional[str] = "unknown"
     timestamp: Optional[str] = None
+
+@app.get("/api/health")
+def health_check():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM engines")
+        engine_count = cursor.fetchone()[0]
+        conn.close()
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "engines_loaded": engine_count,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
 @app.get("/api/engines")
 def list_engines():
@@ -98,7 +116,6 @@ def get_upgrade_advice(deck_slug: str):
 @app.post("/api/telemetry")
 def ingest_telemetry(payload: TelemetryPayload):
     conn = get_db()
-    # Resolve deck_slug to engine id for foreign key linkage
     engine = conn.execute("SELECT id FROM engines WHERE slug = ?", (payload.deck_slug.lower(),)).fetchone()
     if not engine:
         conn.close()
@@ -113,7 +130,6 @@ def ingest_telemetry(payload: TelemetryPayload):
     )
     conn.commit()
     
-    # Count total matches recorded for this engine_id
     count = conn.execute("SELECT COUNT(*) as cnt FROM telemetry WHERE engine_id = ?", (engine_id,)).fetchone()["cnt"]
     conn.close()
 
@@ -121,6 +137,31 @@ def ingest_telemetry(payload: TelemetryPayload):
         "status": "accepted",
         "matches_recorded": count
     }
+
+@app.get("/api/telemetry/recent")
+def get_recent_telemetry(limit: int = 10):
+    conn = get_db()
+    query = """
+        SELECT t.id, e.slug as deck_slug, t.result, t.turns, t.opponent_archetype, t.timestamp
+        FROM telemetry t
+        JOIN engines e ON t.engine_id = e.id
+        ORDER BY t.id DESC
+        LIMIT ?
+    """
+    rows = conn.execute(query, (limit,)).fetchall()
+    conn.close()
+
+    return [
+        {
+            "id": r["id"],
+            "deck_slug": r["deck_slug"],
+            "result": r["result"],
+            "turns": r["turns"],
+            "opponent_archetype": r["opponent_archetype"],
+            "timestamp": r["timestamp"]
+        }
+        for r in rows
+    ]
 
 @app.get("/api/stats/{deck_slug}")
 def get_deck_stats(deck_slug: str):
