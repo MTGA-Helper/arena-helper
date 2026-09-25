@@ -1,5 +1,4 @@
-﻿# main.py - Evidence-Driven Decision Intelligence Endpoint
-import sqlite3
+﻿import sqlite3
 from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,45 +18,43 @@ app.add_middleware(
 )
 
 def get_db():
-    import sqlite3
     conn = sqlite3.connect("engine_graph.db")
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.get("/api/engines")
+def list_engines():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM engines")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row["slug"] for row in rows]
+
 @app.get("/api/upgrade/{deck_slug}")
 def get_upgrade_advice(deck_slug: str):
     conn = get_db()
-    
-    # Query engine evidence record from database
+
+    # Query engine record matching actual SQLite schema
     engine = conn.execute("SELECT * FROM engines WHERE slug = ?", (deck_slug.lower(),)).fetchone()
     if not engine:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Engine slug '{deck_slug}' not found in knowledge graph.")
-        
-    # Fetch corresponding decision outcome metrics
+
+    # Fetch corresponding decision outcome metrics if present
     outcome = conn.execute("SELECT * FROM decision_outcomes WHERE engine_id = ?", (engine["id"],)).fetchone()
     conn.close()
-    
-    # Construct relational evidence diagnostics block
+
+    # Construct relational diagnostics safely matching available database columns
     diagnostics = {
         "evidence_version": "ADR-003.1",
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "source": "SQLite Knowledge Graph",
         "decision_record_id": outcome["id"] if outcome else None,
         "engine_state": engine["status"],
-        "completion_percentage": engine["completion_percentage"],
-        "missing_role": engine["missing_role"],
         "connection_score": engine["connection_score"],
         "resilience_score": engine["resilience_score"],
-        "must_protect": engine["must_protect"],
-        "personal_model": {
-            "sample_size": engine["personal_sample_size"],
-            "win_rate": engine["personal_win_rate"]
-        },
-        "community_model": {
-            "sample_size": engine["community_sample_size"],
-            "win_rate": engine["community_win_rate"]
-        }
+        "must_protect": engine["must_protect"]
     }
 
     return {
@@ -71,14 +68,3 @@ def get_upgrade_advice(deck_slug: str):
         "rationale": outcome["rationale"] if outcome else "Baseline operational.",
         "diagnostics": diagnostics
     }
-@app.get("/api/engines")
-def list_engines():
-    import sqlite3
-    conn = sqlite3.connect("engine_graph.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT slug FROM engines")
-    rows = cursor.fetchall()
-    conn.close()
-    return [row["slug"] for row in rows]
-
