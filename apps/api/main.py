@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 app = FastAPI(
     title="Arena Helper API",
-    version="1.2.0",
-    description="Engine-centric TCG decision intelligence platform with telemetry and health monitoring."
+    version="1.2.1",
+    description="Engine-centric TCG decision intelligence platform with persistent telemetry and health monitoring."
 )
 
 app.add_middleware(
@@ -25,13 +25,11 @@ def get_db():
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
-# Rebuild telemetry table cleanly to ensure engine_id foreign key schema
+# Safely initialize telemetry table without dropping existing historical data
 def init_db():
     conn = get_db()
-    # Drop old deck_slug telemetry table if it exists to cleanly migrate to foreign key model
-    conn.execute("DROP TABLE IF EXISTS telemetry;")
     conn.execute("""
-        CREATE TABLE telemetry (
+        CREATE TABLE IF NOT EXISTS telemetry (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             engine_id INTEGER NOT NULL,
             result TEXT NOT NULL,
