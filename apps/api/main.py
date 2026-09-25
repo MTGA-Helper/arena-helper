@@ -70,3 +70,13 @@ def get_upgrade_advice(deck_slug: str):
         "rationale": outcome["rationale"] if outcome else "Baseline operational.",
         "diagnostics": diagnostics
     }
+@app.get("/api/engines")
+def list_engines():
+    import sqlite3
+    conn = sqlite3.connect("engine_graph.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT slug FROM engines")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row["slug"] for row in rows]
