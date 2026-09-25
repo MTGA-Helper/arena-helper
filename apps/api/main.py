@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 def get_db():
+    import sqlite3
     conn = sqlite3.connect("engine_graph.db")
     conn.row_factory = sqlite3.Row
     return conn
@@ -80,3 +81,4 @@ def list_engines():
     rows = cursor.fetchall()
     conn.close()
     return [row["slug"] for row in rows]
+
