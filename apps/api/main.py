@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 app = FastAPI(
     title="Arena Helper API",
-    version="1.1.0",
-    description="Engine-centric TCG decision intelligence platform with telemetry."
+    version="1.1.1",
+    description="Engine-centric TCG decision intelligence platform with robust telemetry foreign keys."
 )
 
 app.add_middleware(
@@ -22,19 +22,22 @@ app.add_middleware(
 def get_db():
     conn = sqlite3.connect("engine_graph.db")
     conn.row_factory = sqlite3.Row
+    # Enable foreign key enforcement in SQLite
+    conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
-# Initialize Telemetry table if it doesn't exist
+# Initialize Telemetry table with engine_id foreign key relationship
 def init_db():
     conn = get_db()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS telemetry (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            deck_slug TEXT NOT NULL,
+            engine_id INTEGER NOT NULL,
             result TEXT NOT NULL,
             turns INTEGER,
             opponent_archetype TEXT,
-            timestamp TEXT
+            timestamp TEXT,
+            FOREIGN KEY(engine_id) REFERENCES engines(id)
         )
     """)
     conn.commit()
@@ -95,21 +98,23 @@ def get_upgrade_advice(deck_slug: str):
 @app.post("/api/telemetry")
 def ingest_telemetry(payload: TelemetryPayload):
     conn = get_db()
-    # Verify engine exists
+    # Resolve deck_slug to engine id for foreign key linkage
     engine = conn.execute("SELECT id FROM engines WHERE slug = ?", (payload.deck_slug.lower(),)).fetchone()
     if not engine:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Engine slug '{payload.deck_slug}' not found.")
 
+    engine_id = engine["id"]
     ts = payload.timestamp or datetime.utcnow().isoformat() + "Z"
+
     conn.execute(
-        "INSERT INTO telemetry (deck_slug, result, turns, opponent_archetype, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (payload.deck_slug.lower(), payload.result.lower(), payload.turns, payload.opponent_archetype.lower(), ts)
+        "INSERT INTO telemetry (engine_id, result, turns, opponent_archetype, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (engine_id, payload.result.lower(), payload.turns, payload.opponent_archetype.lower(), ts)
     )
     conn.commit()
     
-    # Count total matches recorded for this deck
-    count = conn.execute("SELECT COUNT(*) as cnt FROM telemetry WHERE deck_slug = ?", (payload.deck_slug.lower(),)).fetchone()["cnt"]
+    # Count total matches recorded for this engine_id
+    count = conn.execute("SELECT COUNT(*) as cnt FROM telemetry WHERE engine_id = ?", (engine_id,)).fetchone()["cnt"]
     conn.close()
 
     return {
@@ -120,12 +125,12 @@ def ingest_telemetry(payload: TelemetryPayload):
 @app.get("/api/stats/{deck_slug}")
 def get_deck_stats(deck_slug: str):
     conn = get_db()
-    engine = conn.execute("SELECT name FROM engines WHERE slug = ?", (deck_slug.lower(),)).fetchone()
+    engine = conn.execute("SELECT id, name FROM engines WHERE slug = ?", (deck_slug.lower(),)).fetchone()
     if not engine:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Engine slug '{deck_slug}' not found.")
 
-    rows = conn.execute("SELECT result FROM telemetry WHERE deck_slug = ?", (deck_slug.lower(),)).fetchall()
+    rows = conn.execute("SELECT result FROM telemetry WHERE engine_id = ?", (engine["id"],)).fetchall()
     conn.close()
 
     matches = len(rows)
@@ -154,10 +159,10 @@ def get_deck_matchups(deck_slug: str):
                COUNT(*) as total, 
                SUM(CASE WHEN result = 'win' THEN 1 ELSE 0 END) as wins 
         FROM telemetry 
-        WHERE deck_slug = ? 
+        WHERE engine_id = ? 
         GROUP BY opponent_archetype
     """
-    rows = conn.execute(query, (deck_slug.lower(),)).fetchall()
+    rows = conn.execute(query, (engine["id"],)).fetchall()
     conn.close()
 
     matchups = []
@@ -171,7 +176,6 @@ def get_deck_matchups(deck_slug: str):
             "win_rate": wr
         })
 
-    # Sort best to worst matchups
     matchups.sort(key=lambda x: x["win_rate"], reverse=True)
 
     return {
