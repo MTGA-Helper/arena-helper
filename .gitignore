@@ -1,0 +1,42 @@
+﻿# Python / Virtual Environments
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite
+*.sqlite3
+*.db
+
+# Runtime Logs & Telemetry Data
+*.log
+*.txt
+!README.md
+!requirements.txt
+GREEvents.txt
+MTGAEvents.txt
+MTGAMatchEvents.txt
+MTGAWinsLosses.txt
+PlayerLogMatches.txt
+
+# Reports & Databases
+engine_graph.db
+MatchReport.json
+MatchReports/
+collection.csv
+unmatched_cards.csv
+
+# OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment & Node Modules
+/.env
+/.env.*
+/node_modules/
+/.env
+/.env.*
+/node_modules/
+/.env
+/.env.*
+/node_modules/
