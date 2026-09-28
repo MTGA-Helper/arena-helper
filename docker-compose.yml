@@ -1,8 +1,63 @@
-﻿services:
-  api:
+version: "3.9"
+
+services:
+  app:
     build:
-      context: ./apps/api
-    container_name: arena-helper-api
-    ports:
-      - "8000:8000"
+      context: .
+      dockerfile: Dockerfile
+    container_name: mtga-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mtga-cards-database-generator:
+        condition: service_healthy
     restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+
+  mtga-cards-database-generator:
+    build:
+      context: ./mtga-cards-database-generator
+      dockerfile: Dockerfile
+    image: mtga-cards-database-generator:local
+    container_name: mtga-cards-database-generator
+    restart: unless-stopped
+    environment:
+      TZ: America/New_York
+    volumes:
+      - ./data:/app/output
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/metadata-initial-run-complete"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2h
+
+  postgres:
+    image: postgres:16
+    container_name: mtga-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

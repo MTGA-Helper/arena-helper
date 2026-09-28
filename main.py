@@ -1,16 +1,3 @@
-# Import modular routers
-from collection import router as collection_router
-from matches import router as matches_router
-from recommendations import router as recommendations_router
-from router_match import router as router_match_router
-
-# ... (your existing settings, lifespan, and app = FastAPI definition) ...
-
-# Register all modular routers
-app.include_router(collection_router)
-app.include_router(matches_router)
-app.include_router(recommendations_router)
-app.include_router(router_match_router)
 # -*- coding: utf-8 -*-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
