@@ -4,12 +4,15 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from apps.api.auth import router as auth_router
 
 app = FastAPI(
     title="Arena Helper API",
     version="1.2.1",
     description="Engine-centric TCG decision intelligence platform with persistent telemetry and health monitoring."
 )
+
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 app.add_middleware(
     CORSMiddleware,
