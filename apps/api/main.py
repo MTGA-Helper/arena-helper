@@ -225,4 +225,3 @@ def get_deck_matchups(deck_slug: str):
         "worst_matchups": [m for m in matchups if m["win_rate"] < 0.5]
     }
 
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
