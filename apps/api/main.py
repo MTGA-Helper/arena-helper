@@ -1,10 +1,10 @@
-﻿import sqlite3
+import sqlite3
 from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from apps.api.auth import router as auth_router
+from .auth import router as auth_router
 
 app = FastAPI(
     title="Arena Helper API",
