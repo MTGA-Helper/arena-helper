@@ -1,15 +1,33 @@
 version: "3.9"
 
 services:
-  app:
+#  app:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    container_name: mtga-app
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      mtga-cards-database-generator:
+#        condition: service_healthy
+#    restart: unless-stopped
+#    env_file:
+#      - .env
+#    environment:
+#      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+#    ports:
+#      - "8080:8080"
+#    volumes:
+#      - ./data:/app/data
+
+  user-portal:
     build:
-      context: .
+      context: ./user-portal
       dockerfile: Dockerfile
-    container_name: mtga-app
+    container_name: user-portal
     depends_on:
       postgres:
-        condition: service_healthy
-      mtga-cards-database-generator:
         condition: service_healthy
     restart: unless-stopped
     env_file:
@@ -17,9 +35,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     ports:
-      - "8080:8080"
-    volumes:
-      - ./data:/app/data
+      - "8000:8000"
 
   mtga-cards-database-generator:
     build:
