@@ -1,25 +1,21 @@
 ﻿import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/arena_helper")
-SYNC_DATABASE_URL = os.getenv("SYNC_DATABASE_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/arena_helper")
+# Default to a reliable SQLite database file if DATABASE_URL is not set
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./arena.db")
 
-# Async engine for async platform operations
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
-AsyncSessionLocal = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
+# Create a clean sync engine with check_same_thread=False for SQLite compatibility
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, echo=False, future=True)
 
-# Synchronous engine and session maker for FastAPI auth & dependencies
-sync_engine = create_engine(SYNC_DATABASE_URL, echo=False, future=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
