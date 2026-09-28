@@ -1,4 +1,5 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, status
+﻿import traceback
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -8,13 +9,12 @@ from database import get_db, engine, Base
 from models import User
 from schemas import UserCreate, UserLogin, Token
 
-# Ensure tables are created when auth.py is loaded
+# Ensure tables are created
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    print(f"Database table creation error: {e}")
+    pass
 
-# Remove router prefix here so main.py handles it cleanly as /auth
 router = APIRouter(tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -48,10 +48,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
         return {"message": "User created successfully"}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         db.rollback()
-        print(f"Registration Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        error_trace = traceback.format_exc()
+        raise HTTPException(status_code=500, detail={"error": str(e), "traceback": error_trace})
 
 @router.post("/login", response_model=Token)
 def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(get_db)):
@@ -65,6 +67,8 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
             )
         access_token = create_access_token(data={"sub": user.email})
         return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"Login Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        error_trace = traceback.format_exc()
+        raise HTTPException(status_code=500, detail={"error": str(e), "traceback": error_trace})
