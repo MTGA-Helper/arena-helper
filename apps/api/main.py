@@ -1,10 +1,10 @@
-﻿import sqlite3
+import sqlite3
 from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from apps.api.auth import router as auth_router
+from auth import router as auth_router
 
 app = FastAPI(
     title="Arena Helper API",
@@ -224,3 +224,5 @@ def get_deck_matchups(deck_slug: str):
         "best_matchups": [m for m in matchups if m["win_rate"] >= 0.5],
         "worst_matchups": [m for m in matchups if m["win_rate"] < 0.5]
     }
+
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
