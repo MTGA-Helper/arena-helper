@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
-from .database import get_db
+from database import get_db
 from .models import User
 
 # Security configurations
