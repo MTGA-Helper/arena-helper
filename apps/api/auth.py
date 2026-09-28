@@ -14,6 +14,7 @@ try:
 except Exception as e:
     print(f"Table creation warning: {e}")
 
+# Clean router with NO prefix here
 router = APIRouter(tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
