@@ -1,0 +1,35 @@
+def sync_matches(cursor):
+    log_path = find_player_log_path()
+    if not log_path or not os.path.exists(log_path):
+        print("[WARNING] Player.log not found at expected path. Skipping match telemetry sync.")
+        return 0
+
+    processed_count = 0
+    match_pattern = re.compile(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).*MatchComplete.*result["\']?\s*:\s*["\']?(Win|Loss|Victory|Defeat)', re.IGNORECASE)
+
+    try:
+        cursor.execute("DELETE FROM user_matches;")
+        
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                match = match_pattern.search(line)
+                if match:
+                    timestamp = match.group(1)
+                    raw_result = match.group(2).upper()
+                    result = "WIN" if raw_result in ["WIN", "VICTORY"] else "LOSS"
+                    
+                    # TODO: Replace hardcoded deck slug with actual deck detection 
+                    # from Player.log telemetry once multi-deck extraction is implemented.
+                    deck_name = "landfall-hydra"
+                    
+                    cursor.execute("""
+                    INSERT INTO user_matches (timestamp, deck_name, result)
+                    VALUES (?, ?, ?)
+                    """, (timestamp, deck_name, result))
+                    processed_count += 1
+                    
+        print(f"[SYNC] Parsed and ingested {processed_count} matches from Player.log into user_matches.")
+    except Exception as e:
+        print(f"[ERROR] Failed parsing Player.log: {e}")
+        
+    return processed_count
