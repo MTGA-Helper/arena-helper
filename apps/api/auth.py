@@ -4,9 +4,12 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 
-from database import get_db
+from database import get_db, engine, Base
 from models import User
 from schemas import UserCreate, UserLogin, Token
+
+# Ensure database tables exist on startup/import
+Base.metadata.create_all(bind=engine)
 
 router = APIRouter(tags=["auth"])
 
