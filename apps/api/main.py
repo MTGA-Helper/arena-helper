@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from .auth import router as auth_router
+from auth import router as auth_router
 
 app = FastAPI(
     title="Arena Helper API",
