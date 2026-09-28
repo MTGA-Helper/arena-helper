@@ -1,24 +1,13 @@
-﻿from pydantic import BaseModel, EmailStr
-from typing import Optional, List, Any
+from pydantic import BaseModel, EmailStr
+import uuid
 
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
-class UserLogin(BaseModel):
+class UserResponse(BaseModel):
+    id: uuid.UUID
     email: EmailStr
-    password: str
+    is_active: bool
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    email: Optional[str] = None
-
-class TelemetryPayload(BaseModel):
-    deck_slug: str
-    result: str
-    turns: Optional[int] = 8
-    opponent_archetype: Optional[str] = "unknown"
-    timestamp: Optional[str] = None
+    model_config = {"from_attributes": True}
