@@ -9,11 +9,10 @@ from database import get_db, engine, Base
 from models import User
 from schemas import UserCreate, UserLogin, Token
 
-# Ensure tables are created
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    pass
+    print(f"Table creation warning: {e}")
 
 router = APIRouter(tags=["auth"])
 
@@ -48,12 +47,13 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
         return {"message": "User created successfully"}
-    except HTTPException as he:
-        raise he
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        error_trace = traceback.format_exc()
-        raise HTTPException(status_code=500, detail={"error": str(e), "traceback": error_trace})
+        print("REGISTRATION EXCEPTION:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/login", response_model=Token)
 def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(get_db)):
@@ -67,8 +67,10 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
             )
         access_token = create_access_token(data={"sub": user.email})
         return {"access_token": access_token, "token_type": "bearer"}
-    except HTTPException as he:
-        raise he
+    except HTTPException:
+        raise
     except Exception as e:
-        error_trace = traceback.format_exc()
-        raise HTTPException(status_code=500, detail={"error": str(e), "traceback": error_trace})
+        db.rollback()
+        print("LOGIN EXCEPTION:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")
