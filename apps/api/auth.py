@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 
 from database import get_db
-from .models import User
+from models import User
 
 # Security configurations
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-in-production")
