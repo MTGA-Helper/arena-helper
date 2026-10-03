@@ -33,7 +33,7 @@ Thumbs.db
 # Environment & Node.js generated files
 /data/*
 !/data/.gitkeep
-!data/sets/.gitkeep
+!data/sets/*
 /.env
 /.env.*
 **/node_modules/
