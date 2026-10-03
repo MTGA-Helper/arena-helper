@@ -30,13 +30,26 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Environment & Node Modules
+# Environment & Node.js generated files
+/data/*
+!/data/.gitkeep
+!/data/formats.json
+!/data/latest.json
+!/data/sets/
+/data/sets/*
+!/data/sets/*.json
 /.env
 /.env.*
-/node_modules/
-/.env
-/.env.*
-/node_modules/
-/.env
-/.env.*
-/node_modules/
+**/node_modules/
+**/dist/
+**/external/
+**/output/
+**/coverage/
+**/.nyc_output/
+**/.cache/
+**/.parcel-cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
