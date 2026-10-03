@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const outputPath = path.join(process.cwd(), 'mtga-cards-database-generator', 'output');
+const outputPath = path.join(process.cwd(), '../mtga-cards-database-generator', 'output');
 const latest = JSON.parse(fs.readFileSync(path.join(outputPath, 'latest.json'), 'utf8'));
 const databasePath = path.join(outputPath, String(latest.latest), `v${latest.latest}-en-database.sqlite`);
 const database = new Database(databasePath, { readonly: true });
