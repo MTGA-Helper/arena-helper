@@ -7,8 +7,8 @@ import csv
 import io
 from uuid import UUID
 
-from database import AsyncSessionLocal
-from models import UserCollection, Card, CardPrint, WildcardInventory
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import UserCollection, Card, CardPrint, WildcardInventory
 
 router = APIRouter(prefix="/collection", tags=["Collection"])
 
@@ -19,7 +19,7 @@ async def get_current_user_id() -> UUID:
         user_id = result.scalars().first()
         if not user_id:
             # Fallback test UUID if no user collections exist yet
-            from models import User
+            from apps.api.models import User
             user_res = await session.execute(select(User).limit(1))
             user = user_res.scalars().first()
             if user:

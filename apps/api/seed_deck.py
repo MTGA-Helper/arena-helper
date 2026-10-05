@@ -1,6 +1,6 @@
 ﻿import asyncio
-from database import AsyncSessionLocal
-from models import Deck, DeckCard, Card
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import Deck, DeckCard, Card
 from sqlalchemy.future import select
 
 async def seed_test_deck():

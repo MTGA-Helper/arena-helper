@@ -1,7 +1,7 @@
 ﻿import asyncio
 import uuid
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def validate_types():
     print('==> Starting Type-Safe Datatype Validation...')

@@ -1,7 +1,7 @@
 ﻿import asyncio
 from sqlalchemy.future import select
-from database import AsyncSessionLocal
-from models import Card, CardTag
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import Card, CardTag
 
 TAG_RULES = {
     "token_generator": [

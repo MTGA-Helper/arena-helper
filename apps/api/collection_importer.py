@@ -2,7 +2,7 @@
 import os
 import csv
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 import uuid
 
 def normalize(name: str) -> str:

@@ -1,6 +1,6 @@
 import asyncio, uuid
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def main():
     print('==> Starting Datatype & Constraint Validation Suite...')

@@ -7,8 +7,8 @@ import httpx
 import structlog
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
-from database import AsyncSessionLocal
-from models import Card, CardPrint, CardLegality
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import Card, CardPrint, CardLegality
 
 logger = structlog.get_logger(__name__)
 

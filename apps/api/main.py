@@ -4,7 +4,9 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from auth import router as auth_router
+from apps.api.auth import router as auth_router
+from apps.api.collection import router as collection_router
+from apps.api.recommendations import router as recommendations_router
 
 app = FastAPI(
     title="Arena Helper API",
@@ -13,6 +15,8 @@ app = FastAPI(
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(collection_router)
+app.include_router(recommendations_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -224,4 +228,5 @@ def get_deck_matchups(deck_slug: str):
         "best_matchups": [m for m in matchups if m["win_rate"] >= 0.5],
         "worst_matchups": [m for m in matchups if m["win_rate"] < 0.5]
     }
+
 

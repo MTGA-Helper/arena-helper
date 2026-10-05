@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def analyze_decks():
     print("[*] Starting Deck Structural Analysis (Phase 2.3)...")
