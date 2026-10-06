@@ -35,50 +35,54 @@ async def upload_collection(file: UploadFile = File(...), user_id: UUID = Depend
     content = await file.read()
     decoded = content.decode("utf-8", errors="ignore")
     csv_reader = csv.DictReader(io.StringIO(decoded))
+    rows = list(csv_reader)
 
     matched_cards = 0
     unmatched_cards = 0
     duplicates = 0
     imported_rows = 0
     unique_set = set()
-
-    # Track row counts by card_id to handle duplicates in CSV gracefully
     collected_quantities = {}
 
-    for row in csv_reader:
-        imported_rows += 1
-        # Expecting typical MTG Arena CSV headers like 'Name', 'Quantity', 'Set', 'Collector Number'
-        name = row.get("Name") or row.get("name")
-        qty_str = row.get("Quantity") or row.get("quantity") or "1"
-        set_code = row.get("Set") or row.get("set")
-        scryfall_id = row.get("Scryfall ID") or row.get("scryfall_id")
+    async with AsyncSessionLocal() as session:
+        print("[*] Preloading card prints and cards into memory for O(1) resolution...")
+        print_res = await session.execute(select(CardPrint.scryfall_id, CardPrint.card_id).where(CardPrint.scryfall_id != None))
+        scryfall_map = {row[0].lower(): row[1] for row in print_res.all() if row[0]}
 
-        try:
-            quantity = int(qty_str)
-        except ValueError:
-            quantity = 1
+        print_set_res = await session.execute(
+            select(Card.name, CardPrint.set_code, Card.id)
+            .join(CardPrint, Card.id == CardPrint.card_id)
+        )
+        name_set_map = {(row[0].lower(), row[1].lower()): row[2] for row in print_set_res.all() if row[0] and row[1]}
 
-        async with AsyncSessionLocal() as session:
+        card_res = await session.execute(select(Card.name, Card.id))
+        name_map = {row[0].lower(): row[1] for row in card_res.all() if row[0]}
+
+        print(f"[*] Preloaded {len(scryfall_map)} scryfall IDs, {len(name_set_map)} name+set pairs, and {len(name_map)} card names.")
+
+        for row in rows:
+            imported_rows += 1
+            name = row.get("Name") or row.get("name")
+            qty_str = row.get("Quantity") or row.get("quantity") or "1"
+            set_code = row.get("Set") or row.get("set")
+            scryfall_id = row.get("Scryfall ID") or row.get("scryfall_id")
+
+            try:
+                quantity = int(qty_str)
+            except ValueError:
+                quantity = 1
+
             card_id = None
 
-            # 1. Try resolution by scryfall_id first if available
-            if scryfall_id:
-                print_res = await session.execute(select(CardPrint.card_id).where(CardPrint.scryfall_id == scryfall_id))
-                card_id = print_res.scalars().first()
+            if scryfall_id and scryfall_id.lower() in scryfall_map:
+                card_id = scryfall_map[scryfall_id.lower()]
 
-            # 2. Fallback resolution by name + set_code if set is provided
             if not card_id and name and set_code:
-                print_res = await session.execute(
-                    select(CardPrint.card_id)
-                    .join(Card, CardPrint.card_id == Card.id)
-                    .where(Card.name.ilike(name), CardPrint.set_code.ilike(set_code))
-                )
-                card_id = print_res.scalars().first()
+                key = (name.strip().lower(), set_code.strip().lower())
+                card_id = name_set_map.get(key)
 
-            # 3. Final fallback resolution by exact canonical Card name
             if not card_id and name:
-                card_res = await session.execute(select(Card.id).where(Card.name.ilike(name)))
-                card_id = card_res.scalars().first()
+                card_id = name_map.get(name.strip().lower())
 
             if card_id:
                 matched_cards += 1
@@ -91,8 +95,7 @@ async def upload_collection(file: UploadFile = File(...), user_id: UUID = Depend
             else:
                 unmatched_cards += 1
 
-    # Bulk upsert into UserCollection
-    async with AsyncSessionLocal() as session:
+        print(f"[*] Processed {imported_rows} CSV rows. Performing bulk upsert...")
         for card_id, total_qty in collected_quantities.items():
             stmt = insert(UserCollection).values(
                 user_id=user_id,
@@ -104,6 +107,7 @@ async def upload_collection(file: UploadFile = File(...), user_id: UUID = Depend
             )
             await session.execute(stmt)
         await session.commit()
+        print("[+] Collection import successfully committed.")
 
     return {
         "status": "success",
@@ -113,6 +117,7 @@ async def upload_collection(file: UploadFile = File(...), user_id: UUID = Depend
         "unmatched_cards": unmatched_cards,
         "duplicates": duplicates
     }
+
 
 @router.get("")
 async def get_collection(user_id: UUID = Depends(get_current_user_id)):
