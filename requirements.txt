@@ -17,3 +17,4 @@ structlog
 typing_extensions==4.16.0
 uvicorn[standard]
 python-jose[cryptography]
+email-validator
