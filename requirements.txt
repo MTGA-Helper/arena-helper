@@ -1,7 +1,7 @@
 alembic==1.20.0
 asyncpg==0.31.0
 aiosqlite
-bcrypt==5.0.0
+bcrypt<5
 fastapi
 greenlet==3.5.5
 httpx
