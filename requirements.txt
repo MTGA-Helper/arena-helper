@@ -16,3 +16,4 @@ SQLAlchemy==2.0.52
 structlog
 typing_extensions==4.16.0
 uvicorn[standard]
+python-jose[cryptography]
