@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, HTTPException
@@ -228,5 +228,3 @@ def get_deck_matchups(deck_slug: str):
         "best_matchups": [m for m in matchups if m["win_rate"] >= 0.5],
         "worst_matchups": [m for m in matchups if m["win_rate"] < 0.5]
     }
-
-
