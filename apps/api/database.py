@@ -1,4 +1,5 @@
-﻿import os
+import logging
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy import create_engine
@@ -10,8 +11,17 @@ load_dotenv()
 DEFAULT_SQLITE_ASYNC = "sqlite+aiosqlite:///./arena.db"
 DEFAULT_SQLITE_SYNC = "sqlite:///./arena.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_ASYNC)
-SYNC_DATABASE_URL = os.getenv("SYNC_DATABASE_URL", DEFAULT_SQLITE_SYNC)
+logger = logging.getLogger(__name__)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None:
+    logger.warning("DATABASE_URL is not set; falling back to SQLite")
+    DATABASE_URL = DEFAULT_SQLITE_ASYNC
+
+SYNC_DATABASE_URL = os.getenv("SYNC_DATABASE_URL")
+if SYNC_DATABASE_URL is None:
+    logger.warning("SYNC_DATABASE_URL is not set; falling back to SQLite")
+    SYNC_DATABASE_URL = DEFAULT_SQLITE_SYNC
 
 # Async engine
 if DATABASE_URL.startswith("sqlite"):
