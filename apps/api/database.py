@@ -15,29 +15,32 @@ SYNC_DATABASE_URL = os.getenv("SYNC_DATABASE_URL", DEFAULT_SQLITE_SYNC)
 
 # Async engine
 if DATABASE_URL.startswith("sqlite"):
-    engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        future=True,
+        connect_args={"check_same_thread": False},
+    )
 else:
     engine = create_async_engine(DATABASE_URL, echo=False, future=True)
 
 AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
 # Synchronous engine
 if SYNC_DATABASE_URL.startswith("sqlite"):
-    sync_engine = create_engine(SYNC_DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
+    sync_engine = create_engine(
+        SYNC_DATABASE_URL,
+        echo=False,
+        future=True,
+        connect_args={"check_same_thread": False},
+    )
 else:
     sync_engine = create_engine(SYNC_DATABASE_URL, echo=False, future=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 Base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
