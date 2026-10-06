@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import func
+from sqlalchemy import delete, func
 import csv
 import io
 from uuid import UUID
@@ -96,6 +96,9 @@ async def upload_collection(file: UploadFile = File(...), user_id: UUID = Depend
                 unmatched_cards += 1
 
         print(f"[*] Processed {imported_rows} CSV rows. Performing bulk upsert...")
+        print(f"[*] Clearing existing collection for user {user_id} (true source-of-truth replacement)...")
+        await session.execute(delete(UserCollection).where(UserCollection.user_id == user_id))
+
         for card_id, total_qty in collected_quantities.items():
             stmt = insert(UserCollection).values(
                 user_id=user_id,
