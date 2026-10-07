@@ -53,3 +53,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+elk/certs-ca.crt
+elk/logstash_ingest_data

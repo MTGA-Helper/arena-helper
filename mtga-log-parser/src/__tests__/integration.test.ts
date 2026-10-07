@@ -83,6 +83,10 @@ function matchEndLine(opts: {
   return `[UnityCrossThreadLogger]Incoming Event.MatchGameRoomStateChangedEvent ${JSON.stringify(json)}`;
 }
 
+function rankInfoLine(info: Record<string, unknown>): string {
+  return `<== RankGetCombinedRankInfo(test-request)\n${JSON.stringify(info)}`;
+}
+
 function deckLine(opts: {
   eventName: string;
   deckName: string;
@@ -126,6 +130,31 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe('parseAllLogsWithDebug integration', () => {
+  it('attaches the post-match constructed rank response to the completed match', async () => {
+    const dir = await makeTempDir();
+    const lines = [
+      matchStartLine({ matchId: 'match-with-rank' }),
+      matchEndLine({ matchId: 'match-with-rank', results: [{ winningTeamId: 1 }] }),
+      rankInfoLine({
+        constructedSeasonOrdinal: 94,
+        constructedClass: 'Silver',
+        constructedLevel: 3,
+        constructedStep: 4,
+      }),
+    ];
+    await writeFile(join(dir, logFilename()), lines.join('\n'));
+
+    const { matches } = await parseAllLogsWithDebug({ logDir: dir });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({
+      constructedSeasonOrdinal: 94,
+      constructedClass: 'Silver',
+      constructedLevel: 3,
+      constructedStep: 4,
+    });
+  });
+
   it('identifies the local player by authenticated client ID when they are seat 2', async () => {
     const dir = await makeTempDir();
     const lines = [

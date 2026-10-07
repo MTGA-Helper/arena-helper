@@ -22,6 +22,10 @@ export interface Match {
   game2: GameResult;
   game3: GameResult;
   matchResult: MatchResult; // calculated, not stored raw
+  constructedSeasonOrdinal: number | null;
+  constructedClass: string | null;
+  constructedLevel: number | null;
+  constructedStep: number | null;
   eventId: string;      // e.g. "Ranked"
   importedAt: number;   // when we parsed this match
   notes: string;       // manual entry, default ''
@@ -290,6 +294,7 @@ export interface Session {
   pendingDeckName: string;
   pendingDeckList: DeckList;
   currentMatchId: string | null;
+  pendingRankMatchId: string | null;
   deckByEvent: Map<string, { name: string; deck: DeckList }>;
   gameEndReasonsMap: Map<string, string[]>;
   deckUsages: Map<string, { deck: DeckList; timestamp: number }>;
