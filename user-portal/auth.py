@@ -33,7 +33,9 @@ Base.metadata.create_all(bind=engine)
 ensure_user_profile_columns()
 
 router = APIRouter(tags=["auth"])
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be configured")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 bearer_scheme = HTTPBearer(auto_error=False)
