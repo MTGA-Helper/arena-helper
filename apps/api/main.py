@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from apps.api.auth import router as auth_router
 from apps.api.collection import router as collection_router
 from apps.api.recommendations import router as recommendations_router
+from apps.api.deck_lab import router as deck_lab_router
 
 app = FastAPI(
     title="Arena Helper API",
@@ -17,6 +18,7 @@ app = FastAPI(
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(collection_router)
 app.include_router(recommendations_router)
+app.include_router(deck_lab_router)
 
 app.add_middleware(
     CORSMiddleware,
