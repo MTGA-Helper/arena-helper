@@ -21,6 +21,7 @@ Design notes:
 - Analysis (completion / wildcard math) happens in the browser; this API
   only stores what a tester deliberately shares.
 """
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -83,6 +84,20 @@ class SubmissionIn(BaseModel):
 async def deck_lab_page() -> HTMLResponse:
     html_path = Path(__file__).parent / "deck_lab.html"
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
+
+
+@router.get("/api/deck-lab/meta-decks")
+async def meta_decks():
+    """The dated meta library snapshot shipped with the service.
+
+    Data lives in meta_library_standard.json next to this module so a meta
+    refresh is a file swap, not a schema change. Each deck carries its
+    source and the snapshot date; the client does collection math locally.
+    """
+    lib_path = Path(__file__).parent / "meta_library_standard.json"
+    if not lib_path.exists():
+        return {"snapshot_date": None, "format": None, "decks": []}
+    return json.loads(lib_path.read_text(encoding="utf-8"))
 
 
 @router.post("/api/deck-lab/submissions")

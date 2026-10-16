@@ -1,0 +1,1082 @@
+{
+  "snapshot_date": "2026-10-16",
+  "format": "Standard",
+  "decks": [
+    {
+      "name": "Izzet Spellementals",
+      "format": "Standard",
+      "archetype": "Tempo",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-1wiznth-3132488",
+      "mainboard": [
+        [
+          3,
+          "Hearth Elemental"
+        ],
+        [
+          4,
+          "Eddymurk Crab"
+        ],
+        [
+          2,
+          "Sunderflock"
+        ],
+        [
+          3,
+          "Colorstorm Stallion"
+        ],
+        [
+          3,
+          "Burst Lightning"
+        ],
+        [
+          4,
+          "Opt"
+        ],
+        [
+          2,
+          "Get Out"
+        ],
+        [
+          1,
+          "Broadside Barrage"
+        ],
+        [
+          4,
+          "Prismari Charm"
+        ],
+        [
+          2,
+          "Traumatic Critique"
+        ],
+        [
+          2,
+          "Spell Snare"
+        ],
+        [
+          4,
+          "Flow State"
+        ],
+        [
+          2,
+          "Impractical Joke"
+        ],
+        [
+          4,
+          "Sleight of Hand"
+        ],
+        [
+          6,
+          "Island"
+        ],
+        [
+          4,
+          "Spirebluff Canal"
+        ],
+        [
+          2,
+          "Stormcarved Coast"
+        ],
+        [
+          4,
+          "Riverpyre Verge"
+        ],
+        [
+          4,
+          "Steam Vents"
+        ]
+      ],
+      "sideboard": [
+        [
+          1,
+          "Spell Snare"
+        ],
+        [
+          2,
+          "Disdainful Stroke"
+        ],
+        [
+          1,
+          "Soul-Guide Lantern"
+        ],
+        [
+          2,
+          "Sunspine Lynx"
+        ],
+        [
+          1,
+          "Ral, Crackling Wit"
+        ],
+        [
+          1,
+          "Ghost Vacuum"
+        ],
+        [
+          1,
+          "Broadside Barrage"
+        ],
+        [
+          2,
+          "Quantum Riddler"
+        ],
+        [
+          1,
+          "Sunderflock"
+        ],
+        [
+          1,
+          "Colorstorm Stallion"
+        ],
+        [
+          2,
+          "Avengers Disassembled"
+        ]
+      ]
+    },
+    {
+      "name": "Mono-Green Landfall",
+      "format": "Standard",
+      "archetype": "Aggro",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-varo-3132460",
+      "mainboard": [
+        [
+          4,
+          "Mossborn Hydra"
+        ],
+        [
+          4,
+          "Icetill Explorer"
+        ],
+        [
+          4,
+          "Llanowar Elves"
+        ],
+        [
+          4,
+          "Mightform Harmonizer"
+        ],
+        [
+          4,
+          "Sazh's Chocobo"
+        ],
+        [
+          4,
+          "Esper Origins"
+        ],
+        [
+          1,
+          "Lumbering Worldwagon"
+        ],
+        [
+          2,
+          "Shared Roots"
+        ],
+        [
+          3,
+          "Sapling Nursery"
+        ],
+        [
+          4,
+          "Earthbender Ascension"
+        ],
+        [
+          3,
+          "Ba Sing Se"
+        ],
+        [
+          4,
+          "Fabled Passage"
+        ],
+        [
+          4,
+          "Escape Tunnel"
+        ],
+        [
+          1,
+          "Demolition Field"
+        ],
+        [
+          14,
+          "Forest"
+        ]
+      ],
+      "sideboard": [
+        [
+          1,
+          "Keen-Eyed Curator"
+        ],
+        [
+          4,
+          "Meltstrider's Resolve"
+        ],
+        [
+          1,
+          "Sapling Nursery"
+        ],
+        [
+          2,
+          "Soul-Guide Lantern"
+        ],
+        [
+          1,
+          "Surrak, Elusive Hunter"
+        ],
+        [
+          2,
+          "Origin of Metalbending"
+        ],
+        [
+          2,
+          "Torpor Orb"
+        ],
+        [
+          2,
+          "Warg Tactics"
+        ]
+      ]
+    },
+    {
+      "name": "Dimir Midrange",
+      "format": "Standard",
+      "archetype": "Midrange",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-kthanakit26-3133106",
+      "mainboard": [
+        [
+          4,
+          "Dream Beavers"
+        ],
+        [
+          4,
+          "Enduring Curiosity"
+        ],
+        [
+          4,
+          "Floodpits Drowner"
+        ],
+        [
+          3,
+          "Spyglass Siren"
+        ],
+        [
+          2,
+          "The Wondrous Wasp"
+        ],
+        [
+          1,
+          "Yuriko, Hope from the Shadows"
+        ],
+        [
+          2,
+          "Tishana's Tidebinder"
+        ],
+        [
+          2,
+          "Bitter Triumph"
+        ],
+        [
+          1,
+          "Spell Snare"
+        ],
+        [
+          3,
+          "Requiting Hex"
+        ],
+        [
+          2,
+          "Shoot the Sheriff"
+        ],
+        [
+          1,
+          "Theorix Charm"
+        ],
+        [
+          2,
+          "We Say Thee Nay!"
+        ],
+        [
+          4,
+          "Kaito, Bane of Nightmares"
+        ],
+        [
+          1,
+          "The Theorist, Jace Beleren"
+        ],
+        [
+          4,
+          "Swamp"
+        ],
+        [
+          2,
+          "Shipwreck Marsh"
+        ],
+        [
+          2,
+          "Restless Reef"
+        ],
+        [
+          4,
+          "Island"
+        ],
+        [
+          2,
+          "Soulstone Sanctuary"
+        ],
+        [
+          1,
+          "Hidden Lair"
+        ],
+        [
+          4,
+          "Gloomlake Verge"
+        ],
+        [
+          4,
+          "Watery Grave"
+        ],
+        [
+          1,
+          "Fountainport"
+        ]
+      ],
+      "sideboard": [
+        [
+          2,
+          "Day of Black Sun"
+        ],
+        [
+          1,
+          "Negate"
+        ],
+        [
+          2,
+          "Duress"
+        ],
+        [
+          2,
+          "Strategic Betrayal"
+        ],
+        [
+          1,
+          "Vren, the Relentless"
+        ],
+        [
+          1,
+          "Wan Shi Tong, Librarian"
+        ],
+        [
+          1,
+          "Tishana's Tidebinder"
+        ],
+        [
+          1,
+          "Ghost Vacuum"
+        ],
+        [
+          1,
+          "Faebloom Trick"
+        ],
+        [
+          2,
+          "Disdainful Stroke"
+        ],
+        [
+          1,
+          "Annul"
+        ]
+      ]
+    },
+    {
+      "name": "Jund Sacrifice",
+      "format": "Standard",
+      "archetype": "Midrange",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-pizzangry-3132485",
+      "mainboard": [
+        [
+          2,
+          "Callous Inspector"
+        ],
+        [
+          4,
+          "Biotech Specialist"
+        ],
+        [
+          4,
+          "Gene Pollinator"
+        ],
+        [
+          3,
+          "Umbral Collar Zealot"
+        ],
+        [
+          4,
+          "The Sackville-Bagginses"
+        ],
+        [
+          1,
+          "Smaug the Magnificent"
+        ],
+        [
+          4,
+          "Greedy Freebooter"
+        ],
+        [
+          1,
+          "Wolverine, Fierce Fighter"
+        ],
+        [
+          1,
+          "Sentinel of the Nameless City"
+        ],
+        [
+          2,
+          "Requiting Hex"
+        ],
+        [
+          1,
+          "Fanatical Offering"
+        ],
+        [
+          1,
+          "Torch the Tower"
+        ],
+        [
+          1,
+          "Stir Up Trouble"
+        ],
+        [
+          4,
+          "Lively Dirge"
+        ],
+        [
+          4,
+          "Obsessive Pursuit"
+        ],
+        [
+          2,
+          "The Misty Mountains Cold"
+        ],
+        [
+          2,
+          "Blood Crypt"
+        ],
+        [
+          3,
+          "Stomping Ground"
+        ],
+        [
+          2,
+          "Blazemire Verge"
+        ],
+        [
+          1,
+          "Swamp"
+        ],
+        [
+          1,
+          "Forest"
+        ],
+        [
+          4,
+          "Overgrown Tomb"
+        ],
+        [
+          4,
+          "Starting Town"
+        ],
+        [
+          4,
+          "Blooming Marsh"
+        ]
+      ],
+      "sideboard": [
+        [
+          3,
+          "Strategic Betrayal"
+        ],
+        [
+          1,
+          "The Ooze"
+        ],
+        [
+          2,
+          "Seedship Impact"
+        ],
+        [
+          4,
+          "Duress"
+        ],
+        [
+          1,
+          "Leatherhead, Swamp Stalker"
+        ],
+        [
+          1,
+          "Shoot the Sheriff"
+        ],
+        [
+          1,
+          "Vicious Rivalry"
+        ],
+        [
+          1,
+          "Maelstrom Pulse"
+        ],
+        [
+          1,
+          "Sentinel of the Nameless City"
+        ]
+      ]
+    },
+    {
+      "name": "4 Color Control",
+      "format": "Standard",
+      "archetype": "Control",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-swb110-3133096",
+      "mainboard": [
+        [
+          1,
+          "North Wind Avatar"
+        ],
+        [
+          4,
+          "Tablet of Discovery"
+        ],
+        [
+          4,
+          "Inevitable Defeat"
+        ],
+        [
+          2,
+          "Firebending Lesson"
+        ],
+        [
+          2,
+          "Flashback"
+        ],
+        [
+          3,
+          "Consult the Star Charts"
+        ],
+        [
+          3,
+          "Lightning Helix"
+        ],
+        [
+          3,
+          "No More Lies"
+        ],
+        [
+          2,
+          "Plunder the Trollshaws"
+        ],
+        [
+          4,
+          "Jeskai Revelation"
+        ],
+        [
+          2,
+          "Day of Judgment"
+        ],
+        [
+          3,
+          "Stock Up"
+        ],
+        [
+          1,
+          "Together as One"
+        ],
+        [
+          1,
+          "Sundown Pass"
+        ],
+        [
+          1,
+          "Sunbillow Verge"
+        ],
+        [
+          1,
+          "Cori Mountain Monastery"
+        ],
+        [
+          1,
+          "Stormcarved Coast"
+        ],
+        [
+          2,
+          "Hallowed Fountain"
+        ],
+        [
+          4,
+          "Great Hall of the Biblioplex"
+        ],
+        [
+          1,
+          "Shattered Sanctum"
+        ],
+        [
+          1,
+          "Mistrise Village"
+        ],
+        [
+          3,
+          "Steam Vents"
+        ],
+        [
+          2,
+          "Sacred Foundry"
+        ],
+        [
+          2,
+          "Godless Shrine"
+        ],
+        [
+          2,
+          "Gloomlake Verge"
+        ],
+        [
+          1,
+          "Deserted Beach"
+        ],
+        [
+          1,
+          "Blazemire Verge"
+        ],
+        [
+          1,
+          "Blood Crypt"
+        ],
+        [
+          1,
+          "Island"
+        ],
+        [
+          1,
+          "Plains"
+        ]
+      ],
+      "sideboard": [
+        [
+          1,
+          "Ancient Vendetta"
+        ],
+        [
+          2,
+          "Fire Magic"
+        ],
+        [
+          2,
+          "Flashfreeze"
+        ],
+        [
+          1,
+          "Price of Freedom"
+        ],
+        [
+          1,
+          "Outrageous Robbery"
+        ],
+        [
+          2,
+          "Strategic Betrayal"
+        ],
+        [
+          2,
+          "Return the Favor"
+        ],
+        [
+          1,
+          "Deadly Cover-Up"
+        ],
+        [
+          1,
+          "Ultima"
+        ],
+        [
+          2,
+          "Get Lost"
+        ]
+      ]
+    },
+    {
+      "name": "Orzhov Lifegain",
+      "format": "Standard",
+      "archetype": "Midrange",
+      "tier": 1,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-jakobpablo-3133114",
+      "mainboard": [
+        [
+          2,
+          "Liliana the Faultless"
+        ],
+        [
+          3,
+          "Moseo, Vein's New Dean"
+        ],
+        [
+          1,
+          "Emptiness"
+        ],
+        [
+          1,
+          "Zoraline, Cosmos Caller"
+        ],
+        [
+          4,
+          "Hinterland Sanctifier"
+        ],
+        [
+          4,
+          "Haliya, Guided by Light"
+        ],
+        [
+          4,
+          "Enlightened Confidant"
+        ],
+        [
+          4,
+          "Amalia Benavides Aguirre"
+        ],
+        [
+          3,
+          "Starscape Cleric"
+        ],
+        [
+          3,
+          "Erode"
+        ],
+        [
+          2,
+          "Bitter Triumph"
+        ],
+        [
+          4,
+          "Case of the Uneaten Feast"
+        ],
+        [
+          3,
+          "Lunar Convocation"
+        ],
+        [
+          2,
+          "Bleachbone Verge"
+        ],
+        [
+          1,
+          "Shattered Sanctum"
+        ],
+        [
+          4,
+          "Concealed Courtyard"
+        ],
+        [
+          4,
+          "Godless Shrine"
+        ],
+        [
+          4,
+          "Starting Town"
+        ],
+        [
+          1,
+          "Dalkovan Encampment"
+        ],
+        [
+          3,
+          "Plains"
+        ],
+        [
+          2,
+          "Multiversal Passage"
+        ],
+        [
+          1,
+          "Swamp"
+        ]
+      ],
+      "sideboard": [
+        [
+          1,
+          "Decorum Dissertation"
+        ],
+        [
+          1,
+          "Settle the Wreckage"
+        ],
+        [
+          1,
+          "Requisition Raid"
+        ],
+        [
+          1,
+          "Starscape Cleric"
+        ],
+        [
+          3,
+          "Strategic Betrayal"
+        ],
+        [
+          2,
+          "Curious Farm Animals"
+        ],
+        [
+          3,
+          "Duress"
+        ],
+        [
+          1,
+          "M.O.D.O.K."
+        ],
+        [
+          1,
+          "Lunar Convocation"
+        ],
+        [
+          1,
+          "Overlord of the Balemurk"
+        ]
+      ]
+    },
+    {
+      "name": "Boros Equipments",
+      "format": "Standard",
+      "archetype": "Aggro",
+      "tier": 2,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-watchwolf92-3132869",
+      "mainboard": [
+        [
+          1,
+          "Bofur, Reliable Guardian"
+        ],
+        [
+          4,
+          "Dáin's Company"
+        ],
+        [
+          3,
+          "Dwalin, Weaponmaster"
+        ],
+        [
+          4,
+          "Dwarven Mauler"
+        ],
+        [
+          4,
+          "Kíli the Resourceful"
+        ],
+        [
+          4,
+          "Thorin, Mountain-king"
+        ],
+        [
+          2,
+          "Chainsaw"
+        ],
+        [
+          4,
+          "Dragonfire Blade"
+        ],
+        [
+          3,
+          "Basilisk Collar"
+        ],
+        [
+          4,
+          "Lavaspur Boots"
+        ],
+        [
+          4,
+          "Leyline Axe"
+        ],
+        [
+          2,
+          "Plains"
+        ],
+        [
+          1,
+          "Mountain"
+        ],
+        [
+          1,
+          "Multiversal Passage"
+        ],
+        [
+          4,
+          "Inspiring Vantage"
+        ],
+        [
+          3,
+          "Cavern of Souls"
+        ],
+        [
+          4,
+          "Sunbillow Verge"
+        ],
+        [
+          4,
+          "The Lonely Mountain"
+        ],
+        [
+          4,
+          "Sacred Foundry"
+        ]
+      ],
+      "sideboard": [
+        [
+          3,
+          "Rest in Peace"
+        ],
+        [
+          1,
+          "Case of the Crimson Pulse"
+        ],
+        [
+          2,
+          "Erode"
+        ],
+        [
+          2,
+          "Abrade"
+        ],
+        [
+          2,
+          "Shattered Acolyte"
+        ],
+        [
+          1,
+          "Split Up"
+        ],
+        [
+          2,
+          "Giant Cindermaw"
+        ],
+        [
+          2,
+          "Voice of Victory"
+        ]
+      ]
+    },
+    {
+      "name": "Boros Dragons",
+      "format": "Standard",
+      "archetype": "Midrange",
+      "tier": 2,
+      "source": "MTGDecks.net",
+      "source_url": "https://mtgdecks.net/Standard/deck-decklist-by-2360299909-3132138",
+      "mainboard": [
+        [
+          4,
+          "Clarion Conqueror"
+        ],
+        [
+          4,
+          "Sarkhan, Dragon Ascendant"
+        ],
+        [
+          4,
+          "Magmatic Hellkite"
+        ],
+        [
+          4,
+          "Smaug the Magnificent"
+        ],
+        [
+          4,
+          "Voice of Victory"
+        ],
+        [
+          4,
+          "Nova Hellkite"
+        ],
+        [
+          2,
+          "Twinmaw Stormbrood"
+        ],
+        [
+          4,
+          "Momo, Friendly Flier"
+        ],
+        [
+          2,
+          "Erode"
+        ],
+        [
+          4,
+          "Burst Lightning"
+        ],
+        [
+          3,
+          "Maelstrom of the Spirit Dragon"
+        ],
+        [
+          4,
+          "Sunbillow Verge"
+        ],
+        [
+          4,
+          "Multiversal Passage"
+        ],
+        [
+          1,
+          "Mountain"
+        ],
+        [
+          1,
+          "Plains"
+        ],
+        [
+          4,
+          "Inspiring Vantage"
+        ],
+        [
+          3,
+          "Cavern of Souls"
+        ],
+        [
+          4,
+          "Sacred Foundry"
+        ]
+      ],
+      "sideboard": [
+        [
+          1,
+          "Dragonhawk, Fate's Tempest"
+        ],
+        [
+          2,
+          "Get Lost"
+        ],
+        [
+          2,
+          "Boros Charm"
+        ],
+        [
+          4,
+          "Seam Rip"
+        ],
+        [
+          2,
+          "Desolation of Smaug"
+        ],
+        [
+          3,
+          "Rest in Peace"
+        ],
+        [
+          1,
+          "The Legend of Roku"
+        ]
+      ]
+    }
+  ]
+}
