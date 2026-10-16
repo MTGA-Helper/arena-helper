@@ -29,7 +29,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, func, select
+from sqlalchemy import Boolean, Column, DateTime, Integer, JSON, String, func, select
 from sqlalchemy.orm import declarative_base
 
 from apps.api.database import AsyncSessionLocal, engine
@@ -42,14 +42,14 @@ LabBase = declarative_base()
 class DeckLabSubmission(LabBase):
     __tablename__ = "deck_lab_submissions"
 
-    id = Integer(primary_key=True, autoincrement=True)
-    created_at = DateTime(nullable=False, default=datetime.utcnow)
-    consent = Boolean(nullable=False, default=False)
-    contact = String(320, nullable=True)
-    summary = JSON(nullable=True)
-    decks = JSON(nullable=True)
-    collection = JSON(nullable=True)
-    source = String(64, nullable=False, default="deck-lab-web")
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    consent = Column(Boolean, nullable=False, default=False)
+    contact = Column(String(320), nullable=True)
+    summary = Column(JSON, nullable=True)
+    decks = Column(JSON, nullable=True)
+    collection = Column(JSON, nullable=True)
+    source = Column(String(64), nullable=False, default="deck-lab-web")
 
 
 router = APIRouter(tags=["Deck Lab"])
