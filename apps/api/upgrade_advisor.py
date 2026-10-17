@@ -1,7 +1,7 @@
 ﻿import asyncio
 import sys
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def get_deck_upgrade_advice(target_deck_name: str):
     async with AsyncSessionLocal() as session:

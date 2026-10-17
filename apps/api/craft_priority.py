@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def generate_craft_priority_report():
     print("[*] Generating Craft Priority Report (Wildcard Optimization)...")

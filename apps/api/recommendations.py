@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 from uuid import UUID
 
-from database import AsyncSessionLocal
-from models import Deck, DeckCard, UserCollection, Card, CardPrint
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import Deck, DeckCard, UserCollection, Card, CardPrint
 from services.next_action_service import get_next_action
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
@@ -14,7 +14,7 @@ async def get_current_user_id() -> UUID:
         result = await session.execute(select(UserCollection.user_id).limit(1))
         user_id = result.scalars().first()
         if not user_id:
-            from models import User
+            from apps.api.models import User
             user_res = await session.execute(select(User).limit(1))
             user = user_res.scalars().first()
             if user:
@@ -51,7 +51,16 @@ async def get_deck_recommendations(user_id: UUID = Depends(get_current_user_id))
             rare_wc = 0
             mythic_wc = 0
 
-            for card_id, req_qty, card_name, rarity in deck_cards:
+            _rank = {"mythic": 4, "special": 4, "masterpiece": 4, "rare": 3, "uncommon": 2, "common": 1}
+            _seen = {}
+            for _cid, _qty, _name, _rar in deck_cards:
+                _r = (_rar or "common").lower()
+                if _cid not in _seen or _rank.get(_r, 0) > _rank.get((_seen[_cid][2] or "common").lower(), 0):
+                    _seen[_cid] = (_qty, _name, _rar)
+            
+            deduped_deck_cards = [(_cid, _q, _n, _r) for _cid, (_q, _n, _r) in _seen.items()]
+
+            for card_id, req_qty, card_name, rarity in deduped_deck_cards:
                 total_required += req_qty
                 owned_qty = user_collection.get(card_id, 0)
                 effective_owned = min(owned_qty, req_qty)

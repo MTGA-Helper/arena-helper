@@ -1,6 +1,6 @@
 import asyncio
-from database import AsyncSessionLocal
-from models import User, WildcardInventory
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import User, WildcardInventory
 
 async def seed_user():
     async with AsyncSessionLocal() as session:

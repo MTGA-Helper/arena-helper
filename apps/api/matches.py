@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from database import AsyncSessionLocal
-from models import MatchHistory, User
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import MatchHistory, User
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
