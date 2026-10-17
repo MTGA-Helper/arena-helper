@@ -63,7 +63,7 @@ function matchStartLine(opts: {
 
 function matchEndLine(opts: {
   matchId: string;
-  results: Array<{ scope?: string; winningTeamId: number; reason?: string }>;
+  results: Array<{ scope?: string; winningTeamId?: number; reason?: string }>;
 }): string {
   const json = {
     matchGameRoomStateChangedEvent: {
@@ -73,7 +73,7 @@ function matchEndLine(opts: {
           matchId: opts.matchId,
           resultList: opts.results.map((r) => ({
             scope: r.scope ?? 'MatchScope_Game',
-            winningTeamId: r.winningTeamId,
+            ...(r.winningTeamId === undefined ? {} : { winningTeamId: r.winningTeamId }),
             reason: r.reason ?? 'ResultReason_Life',
           })),
         },
@@ -81,6 +81,10 @@ function matchEndLine(opts: {
     },
   };
   return `[UnityCrossThreadLogger]Incoming Event.MatchGameRoomStateChangedEvent ${JSON.stringify(json)}`;
+}
+
+function rankInfoLine(info: Record<string, unknown>): string {
+  return `<== RankGetCombinedRankInfo(test-request)\n${JSON.stringify(info)}`;
 }
 
 function deckLine(opts: {
@@ -126,6 +130,31 @@ afterEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe('parseAllLogsWithDebug integration', () => {
+  it('attaches the post-match constructed rank response to the completed match', async () => {
+    const dir = await makeTempDir();
+    const lines = [
+      matchStartLine({ matchId: 'match-with-rank' }),
+      matchEndLine({ matchId: 'match-with-rank', results: [{ winningTeamId: 1 }] }),
+      rankInfoLine({
+        constructedSeasonOrdinal: 94,
+        constructedClass: 'Silver',
+        constructedLevel: 3,
+        constructedStep: 4,
+      }),
+    ];
+    await writeFile(join(dir, logFilename()), lines.join('\n'));
+
+    const { matches } = await parseAllLogsWithDebug({ logDir: dir });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({
+      constructedSeasonOrdinal: 94,
+      constructedClass: 'Silver',
+      constructedLevel: 3,
+      constructedStep: 4,
+    });
+  });
+
   it('identifies the local player by authenticated client ID when they are seat 2', async () => {
     const dir = await makeTempDir();
     const lines = [
@@ -456,6 +485,60 @@ describe('parseAllLogsWithDebug integration', () => {
     expect(m.game1).toBe(0);
     expect(m.game2).toBe(1);
     expect(m.game3).toBeNull();
+  });
+
+  it('preserves draw game results when MTGA omits winningTeamId', async () => {
+    const dir = await makeTempDir();
+    const lines = [
+      matchStartLine({ matchId: 'match-draw-game' }),
+      matchEndLine({
+        matchId: 'match-draw-game',
+        results: [{ reason: 'ResultReason_Draw' }],
+      }),
+    ];
+    await writeFile(join(dir, logFilename()), lines.join('\n'));
+
+    const { matches } = await parseAllLogsWithDebug({ logDir: dir });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0].game1).toBe('Draw');
+    expect(matches[0].matchResult).toBe('Draw');
+  });
+
+  it('uses a match-scope draw when no game-scope result is present', async () => {
+    const dir = await makeTempDir();
+    const lines = [
+      matchStartLine({ matchId: 'match-draw-scope' }),
+      matchEndLine({
+        matchId: 'match-draw-scope',
+        results: [{ scope: 'MatchScope_Match', reason: 'ResultReason_Draw' }],
+      }),
+    ];
+    await writeFile(join(dir, logFilename()), lines.join('\n'));
+
+    const { matches } = await parseAllLogsWithDebug({ logDir: dir });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0].game1).toBeNull();
+    expect(matches[0].matchResult).toBe('Draw');
+  });
+
+  it('recognizes alternate MTGA draw reason names', async () => {
+    const dir = await makeTempDir();
+    const lines = [
+      matchStartLine({ matchId: 'match-intentional-draw' }),
+      matchEndLine({
+        matchId: 'match-intentional-draw',
+        results: [{ reason: 'ResultReason_IntentionalDraw' }],
+      }),
+    ];
+    await writeFile(join(dir, logFilename()), lines.join('\n'));
+
+    const { matches } = await parseAllLogsWithDebug({ logDir: dir });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0].game1).toBe('Draw');
+    expect(matches[0].matchResult).toBe('Draw');
   });
 
   it('patches gameEndReason in gameSnapshots from finalMatchResult reasons', async () => {

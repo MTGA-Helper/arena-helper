@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeMatchResult, parseLogDate } from '../utils.js';
+import { computeMatchResult, parseLogDate, tryParseJSON } from '../utils.js';
 import { MatchFilters } from '../logParser.js';
 import { extractDeckInfo } from '../deckParser.js';
 import { opponentsByPlatform } from '../analytics.js';
@@ -287,5 +287,22 @@ describe('opponentsByPlatform', () => {
       makeMatch({ opponentPlatform: p }),
     );
     expect(opponentsByPlatform(matches)).toEqual({ Mac: 1, Windows: 1, iOS: 1, Android: 1 });
+  });
+});
+
+describe('tryParseJSON', () => {
+  it('parses a JSON entry', () => {
+    expect(tryParseJSON('prefix {"a":1}')).toEqual({ a: 1 });
+  });
+
+  it('ignores trailing diagnostic lines after the JSON object', () => {
+    const entry = '[Logger] header\n{"a":{"b":"x}y\\"}"},"c":[1]}\nCouldn\'t find affector id 291 in either new or old GameState';
+    expect(tryParseJSON(entry)).toEqual({ a: { b: 'x}y"}' }, c: [1] });
+  });
+
+  it('returns null and reports an error for invalid JSON', () => {
+    let errors = 0;
+    expect(tryParseJSON('{"a":', () => { errors++; })).toBeNull();
+    expect(errors).toBe(1);
   });
 });

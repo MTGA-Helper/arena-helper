@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import type { Match, GameSnapshot, TurnSnapshot, TurnDrawRecord, GameAction, ParseConfig, ParseResult, DeckList, Session, ParseSession, ParseStats } from './types.js';
-import { isGameStateMessage, parseLogDate, tryParseJSON } from './utils.js';
+import { isDrawReason, isGameStateMessage, parseLogDate, tryParseJSON } from './utils.js';
 import { createGameDataCollector } from './gameDataParser.js';
 import { createBoardStateCollector } from './boardStateParser.js';
 import { handleParseDeck } from './deckParser.js';
@@ -67,6 +67,11 @@ function handleParseMatchStateChange(line: string, session: Session, ps: ParseSe
       } else if (stateType === 'MatchGameRoomStateType_MatchCompleted' && gameRoomInfo) {
         ps.stats.matchesCompleted++;
         handleMatchEnd(gameRoomInfo, session.matchMap, session.localTeamIdMap, session.gameEndReasonsMap);
+        const finalResult = gameRoomInfo.finalMatchResult as Record<string, unknown> | undefined;
+        const matchId = finalResult?.matchId as string | undefined;
+        if (matchId && session.matchMap.get(matchId)?.matchResult !== null) {
+          session.pendingRankMatchId = matchId;
+        }
         // Do NOT null currentMatchId here — MTGA often writes trailing GRE messages for
         // the final turns after the MatchCompleted event. Keeping currentMatchId set lets
         // the board state and game data collectors capture those. The next MatchPlaying
@@ -74,6 +79,46 @@ function handleParseMatchStateChange(line: string, session: Session, ps: ParseSe
       }
     }
   }
+}
+
+function handleParseRankInfoEntry(entry: string, session: Session): void {
+  if (!entry.includes('<== RankGetCombinedRankInfo(') || !session.pendingRankMatchId) return;
+
+  const jsonStart = entry.indexOf('{');
+  if (jsonStart < 0) return;
+  // Trailing non-entry lines (e.g. "[StartupProfiling] ...") get appended to the entry,
+  // so fall back to the first JSON line when the whole remainder doesn't parse.
+  const body = entry.slice(jsonStart);
+  const parsed = tryParseJSON(body) ?? tryParseJSON(body.split(/\r?\n/, 1)[0]);
+  if (!parsed || typeof parsed !== 'object') return;
+
+  const rankInfo = parsed as Record<string, unknown>;
+  const match = session.matchMap.get(session.pendingRankMatchId);
+  if (!match) {
+    session.pendingRankMatchId = null;
+    return;
+  }
+
+  session.matchMap.set(match.id, {
+    ...match,
+    constructedSeasonOrdinal:
+      typeof rankInfo.constructedSeasonOrdinal === 'number' ? rankInfo.constructedSeasonOrdinal : null,
+    constructedClass:
+      typeof rankInfo.constructedClass === 'string' ? rankInfo.constructedClass : null,
+    constructedLevel:
+      typeof rankInfo.constructedLevel === 'number' ? rankInfo.constructedLevel : null,
+    constructedStep:
+      typeof rankInfo.constructedStep === 'number' ? rankInfo.constructedStep : null,
+          // The log reports 0 for "not applicable", so treat it as missing.
+          constructedPercentile:
+            typeof rankInfo.constructedPercentile === 'number' && rankInfo.constructedPercentile > 0
+              ? rankInfo.constructedPercentile
+              : null,
+          constructedLeaderboardPlace:
+            typeof rankInfo.constructedLeaderboardPlace === 'number' && rankInfo.constructedLeaderboardPlace > 0
+              ? rankInfo.constructedLeaderboardPlace
+              : null,  });
+  session.pendingRankMatchId = null;
 }
 
 function handleParseGREEventLine(line: string, session: Session, ps: ParseSession) {
@@ -111,6 +156,7 @@ function handleParseGREEventLine(line: string, session: Session, ps: ParseSessio
 
 function parseEntry(entry: string, ps: ParseSession): void {
   const session = ps.session;
+  handleParseRankInfoEntry(entry, session);
 
   const parsed = tryParseJSON(entry);
   if (parsed && typeof parsed === 'object') {
@@ -187,6 +233,7 @@ function buildNewSession(matchFilter: (eventId: string) => boolean): ParseSessio
       pendingDeckName: '',
       pendingDeckList: emptyDeck,
       currentMatchId: null,
+      pendingRankMatchId: null,
       deckByEvent: new Map(),
       gameEndReasonsMap: new Map(),
       deckUsages: new Map(),
@@ -242,7 +289,7 @@ export async function parseAllLogsWithDebug(config: ParseConfig): Promise<ParseR
       rawReason === 'ResultReason_Life' ? 'life' :
       rawReason === 'ResultReason_Concede' ? 'concede' :
       rawReason === 'ResultReason_Timeout' ? 'timeout' :
-      rawReason === 'ResultReason_Draw' ? 'draw' : 'unknown';
+      isDrawReason(rawReason) ? 'draw' : 'unknown';
     return { ...s, gameEndReason };
   });
 

@@ -1,11 +1,11 @@
 import type { GameSnapshot, GameDataCollector, SnapshotBuilder } from './types.js';
-import { gameKey, isGameStateMessage } from './utils.js';
+import { gameKey, isDrawReason, isGameStateMessage } from './utils.js';
 
 function parseEndReason(reason: string): GameSnapshot['gameEndReason'] {
   if (reason === 'ResultReason_Concede') return 'concede';
   if (reason === 'ResultReason_Life') return 'life';
   if (reason === 'ResultReason_Timeout') return 'timeout';
-  if (reason === 'ResultReason_Draw') return 'draw';
+  if (isDrawReason(reason)) return 'draw';
   return 'unknown';
 }
 
