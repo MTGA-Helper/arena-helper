@@ -81,7 +81,7 @@
   <div class="panel pick" id="pickPanel" style="display:none">
     <h2>Pro Pick</h2>
     <p id="pickBody" style="line-height:1.6; margin:0"></p>
-    <p class="fineprint">Score = 75% completion + 25% cost score. Wildcard burden weights: mythic ×3, rare ×2, uncommon ×0.5, common ×0.25. Cost score = 100 × (1 − min(burden, 50) / 50). Rarities come from Scryfall (print rarity ≈ Arena rarity).</p>
+    <p class="fineprint">Score = 75% completion + 25% cost score. Wildcard burden weights: mythic ×3, rare ×2, uncommon ×0.5, common ×0.25. Cost score = 100 × (1 − min(burden, 50) / 50). Rarities come from the Arena Helper card database — the cheapest Arena printing of each card — with Scryfall filling any gaps.</p>
     <div class="row">
       <button class="secondary" id="rankCompletion" type="button">Rank by completion</button>
       <button class="secondary" id="rankCost" type="button">Rank by cheapest to finish</button>
@@ -173,6 +173,20 @@ function parseDeckText(text) {
   return { mainboard: main, sideboard: side };
 }
 
+async function preloadRarities(names) {
+  // Primary source: the Arena Helper card database (cheapest Arena printing).
+  const missing = [...new Set(names.map(norm))].filter(k => !rarityCache[k]);
+  if (!missing.length) return;
+  try {
+    const r = await fetch("/api/deck-lab/rarities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ names: missing }) });
+    if (r.ok) {
+      const j = await r.json();
+      for (const [k, v] of Object.entries(j.rarities || {})) rarityCache[k] = v;
+    }
+  } catch (e) { /* fall through to Scryfall per-card */ }
+  store.set("rarity", rarityCache);
+}
+
 async function rarityFor(name) {
   const key = norm(name);
   if (rarityCache[key]) return rarityCache[key];
@@ -217,6 +231,7 @@ async function render() {
   $("pickPanel").style.display = decks.length ? "block" : "none";
   const list = $("deckList");
   list.innerHTML = "";
+  await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
   const results = [];
   for (const deck of decks) {
     const a = await analyze(deck);
@@ -260,15 +275,30 @@ async function renderMeta() {
     ? `${metaLibrary.format || "Standard"} meta snapshot · ${metaLibrary.snapshot_date || ""} · ${decks.length} archetypes with full 60-card lists. Upload your collection above to see what you can build.`
     : "Meta library is empty on this server.";
   const filter = $("metaFilter").value;
+  await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
   const rows = [];
   for (const d of decks) {
     const a = await analyze(d);
     rows.push({ d, a, st: metaStatusOf(a) });
   }
   rows.sort((x, y) => (x.st.rank - y.st.rank) || (x.a.burden - y.a.burden) || ((x.d.tier || 9) - (y.d.tier || 9)));
+  const buildableNow = rows.filter(r => r.st.rank === 0).length;
+  const withinReach = rows.filter(r => r.st.rank === 1).length;
+  if (Object.keys(collection).length) {
+    $("metaStatus").textContent = `${metaLibrary.format || "Standard"} meta snapshot · ${metaLibrary.snapshot_date || ""} · With your collection: ${buildableNow} of ${rows.length} decks buildable NOW with no wildcards · ${withinReach} more within a few wildcards.`;
+  }
   box.innerHTML = "";
+  let lastGroup = -1;
   rows.forEach(({ d, a, st }, i) => {
     if (filter !== "all" && String(st.rank) !== filter) return;
+    const group = st.rank === 0 ? 0 : 1;
+    if (group !== lastGroup) {
+      lastGroup = group;
+      const h = document.createElement("h3");
+      h.style.margin = "14px 0 4px";
+      h.textContent = group === 0 ? "Buildable now — no wildcards needed" : "Buildable with wildcards";
+      box.appendChild(h);
+    }
     const div = document.createElement("div");
     div.className = "deck";
     const miss = a.missing.length

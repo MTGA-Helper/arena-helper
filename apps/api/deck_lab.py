@@ -86,6 +86,44 @@ async def deck_lab_page() -> HTMLResponse:
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
 
+class RarityRequest(BaseModel):
+    names: list[str]
+
+
+@router.post("/api/deck-lab/rarities")
+async def rarities(body: RarityRequest):
+    """Card rarities from the production card database (Neon).
+
+    For each requested card name, returns the CHEAPEST Arena printing's
+    rarity across card_prints — if any printing of a card exists at a lower
+    rarity, Arena lets you build with that printing, so the wildcard cost
+    uses the lowest. Unknown names are omitted; the client falls back to
+    Scryfall, then 'unknown'.
+    """
+    from apps.api.models import Card, CardPrint
+
+    rank = {"common": 0, "uncommon": 1, "rare": 2, "mythic": 3}
+    wanted = {n.strip().lower() for n in body.names if n and n.strip()}
+    if not wanted:
+        return {"rarities": {}}
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Card.name, CardPrint.rarity)
+            .join(CardPrint, CardPrint.card_id == Card.id)
+        )
+        best: dict[str, str] = {}
+        for name, rarity in result.all():
+            key = name.strip().lower()
+            if key not in wanted or rarity is None:
+                continue
+            r = rarity.strip().lower()
+            if r not in rank:
+                continue
+            if key not in best or rank[r] < rank[best[key]]:
+                best[key] = r
+        return {"rarities": best}
+
+
 @router.get("/api/deck-lab/meta-decks")
 async def meta_decks():
     """The dated meta library snapshot shipped with the service.
