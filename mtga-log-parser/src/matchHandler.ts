@@ -1,5 +1,5 @@
 import type { Match, GameResult, DeckList, RawGameResult} from './types.js';
-import { computeMatchResult, isGameStateMessage} from './utils.js';
+import { computeMatchResult, isDrawReason, isGameStateMessage} from './utils.js';
 
 export function handleMatchStart(
   obj: Record<string, unknown>,
@@ -87,6 +87,8 @@ export function handleMatchStart(
     constructedClass: null,
     constructedLevel: null,
     constructedStep: null,
+    constructedPercentile: null,
+    constructedLeaderboardPlace: null,
     eventId: eventLabel,
     importedAt: Date.now(),
     notes: '',
@@ -120,7 +122,12 @@ export function handleMatchEnd(
     .flatMap((r) => {
       const winningTeamId = r.winningTeamId;
       const reason = r.reason;
-      if (typeof winningTeamId !== 'number' || typeof reason !== 'string') return [];
+      if (typeof reason !== 'string') return [];
+      // Draw results may omit winningTeamId because neither team won the game.
+      if (isDrawReason(reason)) {
+        return [{ winningTeamId: typeof winningTeamId === 'number' ? winningTeamId : null, reason }];
+      }
+      if (typeof winningTeamId !== 'number') return [];
       return [{ winningTeamId, reason }];
     });
 
@@ -130,7 +137,7 @@ export function handleMatchEnd(
   gameEndReasonsMap.set(matchId, gameResults.map((r) => r.reason));
 
   const games: GameResult[] = gameResults.map((r) => {
-    if (r.reason === 'ResultReason_Draw') return 'Draw';
+    if (isDrawReason(r.reason)) return 'Draw';
     return r.winningTeamId === localTeamId ? 1 : 0;
   });
 
@@ -145,7 +152,9 @@ export function handleMatchEnd(
   if (matchResult === null) {
     const matchScopeEntry = resultList.find((r) => r.scope === 'MatchScope_Match');
     const matchWinningTeamId = matchScopeEntry?.winningTeamId;
-    if (typeof matchWinningTeamId === 'number') {
+    if (typeof matchScopeEntry?.reason === 'string' && isDrawReason(matchScopeEntry.reason)) {
+      matchResult = 'Draw';
+    } else if (typeof matchWinningTeamId === 'number') {
       matchResult = matchWinningTeamId === localTeamId ? 'Win' : 'Loss';
     }
   }

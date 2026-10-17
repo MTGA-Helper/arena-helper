@@ -4,6 +4,11 @@ All notable changes to `mtga-log-parser` are documented here.
 
 ---
 
+## Unreleased
+
+### Fixed
+- Preserve MTGA draw results when a draw entry omits `winningTeamId`, uses an alternate draw reason, or is match-scope-only.
+
 ## [4.1.0] — 2026-05-16
 
 ### Added

@@ -70,6 +70,9 @@ const INDEX_BODY = JSON.stringify({
       constructedSeasonOrdinal: { type: 'integer' },
       constructedLevel: { type: 'integer' },
       constructedStep: { type: 'integer' },
+      constructedPercentile: { type: 'float' },
+      constructedLeaderboardPlace: { type: 'integer' },
+      rankLabel: { type: 'text', fields: { keyword: { type: 'keyword', ignore_above: 256 } } },
       rankDelta: { type: 'integer' },
       notes: { type: 'text' },
       playedCards: { type: 'flattened' },
@@ -129,11 +132,23 @@ for (const match of matches) {
 
 // Cumulative ladder steps before each class, and steps per level within it (4 levels per class).
 // Every class below Mythic has 4 levels of 6 steps; Bronze-Gold give +2/-1 per win/loss, Platinum and above +1/-1.
+// Mythic has no levels/steps: it shows a percentile, or a leaderboard place (1-1800, 1 = best, ties allowed).
 const RANK_STEPS = { Bronze: [0, 6], Silver: [24, 6], Gold: [48, 6], Platinum: [72, 6], Diamond: [96, 6], Mythic: [120, 0] };
 function rankScore(match) {
   const entry = RANK_STEPS[match.constructedClass];
   if (!entry) return null;
   return entry[0] + (4 - (match.constructedLevel ?? 4)) * entry[1] + (match.constructedStep ?? 0);
+}
+
+// Human-readable current rank: "Diamond 2 (step 3)", "Mythic 99.2%" or "Mythic #523".
+function rankLabel(match) {
+  if (!match.constructedClass) return null;
+  if (match.constructedClass === 'Mythic') {
+    if (match.constructedLeaderboardPlace) return `Mythic #${match.constructedLeaderboardPlace}`;
+    if (match.constructedPercentile) return `Mythic ${match.constructedPercentile.toFixed(2)}%`;
+    return 'Mythic';
+  }
+  return `${match.constructedClass} ${match.constructedLevel ?? '?'} (step ${match.constructedStep ?? 0})`;
 }
 
 // Rank change per match: score after this match minus score after the previous ranked match of the same event.
@@ -147,10 +162,23 @@ for (const match of [...matches].sort((a, b) => a.timestamp - b.timestamp)) {
   lastScoreByEvent.set(match.eventId, score);
 }
 
+// instanceName: card name looked up from the card database by grpId (omitted when unknown).
+const withName = (grpId) => { const instanceName = cardNamesByGrpId.get(grpId); return instanceName ? { instanceName } : {}; };
+const namedAction = ({ matchId, ...action }) => ({
+  ...action,
+  ...withName(action.sourceGrpId),
+  targetInstanceNames: (action.targetGrpIds ?? []).map((grpId) => cardNamesByGrpId.get(grpId) ?? null),
+});
+const namedSnapshot = ({ matchId, ...snapshot }) => Object.fromEntries(Object.entries(snapshot).map(([key, value]) => [
+  key,
+  Array.isArray(value) && value.length && typeof value[0] === 'object' && 'grpId' in value[0]
+    ? value.map(({ name, ...card }) => ({ ...card, ...withName(card.grpId) }))
+    : value,
+]));
 const documents = [];
 for (const match of matches) {
   const playedCards = result.gameActions
-    .filter((action) => action.matchId === match.id && action.type === 'CastSpell')
+    .filter((action) => action.matchId === match.id && (action.type === 'CastSpell' || action.type === 'PlayLand'))
     .sort((a, b) => a.gameNumber - b.gameNumber || a.turnNumber - b.turnNumber)
     .reduce(
       (cards, action) => {
@@ -167,6 +195,7 @@ for (const match of matches) {
             type: action.type,
             targetInstanceIds: action.targetInstanceIds,
             targetGrpIds: action.targetGrpIds,
+            targetInstanceNames: action.targetGrpIds.map((grpId) => cardNamesByGrpId.get(grpId) ?? null),
           },
         });
         cards[player][action.gameNumber] = game;
@@ -188,6 +217,9 @@ for (const match of matches) {
     constructedClass: match.constructedClass,
     constructedLevel: match.constructedLevel,
     constructedStep: match.constructedStep,
+    constructedPercentile: match.constructedPercentile,
+    constructedLeaderboardPlace: match.constructedLeaderboardPlace,
+    rankLabel: rankLabel(match),
     playedCards,
   };
   // Deterministic id makes re-runs overwrite rather than duplicate matches.
@@ -203,8 +235,8 @@ for (const match of matches) {
     opponentGrpIds: [...(result.opponentGrpIds.get(match.id) ?? [])],
     gameSnapshots: forMatch(result.gameSnapshots),
     turnDrawRecords: forMatch(result.turnDrawRecords),
-    gameActions: forMatch(result.gameActions),
-    boardSnapshots: forMatch(result.boardSnapshots),
+    gameActions: result.gameActions.filter((row) => row.matchId === match.id).map(namedAction),
+    boardSnapshots: result.boardSnapshots.filter((row) => row.matchId === match.id).map(namedSnapshot),
   };
   documents.push({ id, doc: fullDoc });
   console.log(JSON.stringify(doc, null, 2));

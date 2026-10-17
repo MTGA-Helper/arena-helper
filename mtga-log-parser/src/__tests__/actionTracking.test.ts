@@ -60,7 +60,7 @@ function greActionLine(opts: {
   turnNumber: number;
   localSeatId: number;
   activePlayer?: number;
-  category: 'CastSpell' | 'ActivateAbility' | 'TriggerAbility';
+  category: 'CastSpell' | 'PlayLand' | 'ActivateAbility' | 'TriggerAbility';
   source: { instanceId: number; grpId: number; ownerSeatId: number };
   targets?: Array<{ instanceId: number; grpId: number }>;
   gameStateType?: string;

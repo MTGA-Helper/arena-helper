@@ -152,7 +152,7 @@ for (const action of result.gameActions) {
   //   matchId: 'abc-123',
   //   gameNumber: 1,
   //   turnNumber: 4,
-  //   type: 'CastSpell',       // 'CastSpell' | 'ActivateAbility' | 'TriggerAbility'
+  //   type: 'CastSpell',       // 'CastSpell' | 'PlayLand' | 'ActivateAbility' | 'TriggerAbility'
   //   castByMe: true,          // false when opponent acted
   //   sourceGrpId: 84790,      // grpId of the spell/permanent
   //   sourceInstanceId: 1234,  // instanceId within this game

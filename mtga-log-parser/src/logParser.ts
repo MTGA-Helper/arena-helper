@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import type { Match, GameSnapshot, TurnSnapshot, TurnDrawRecord, GameAction, ParseConfig, ParseResult, DeckList, Session, ParseSession, ParseStats } from './types.js';
-import { isGameStateMessage, parseLogDate, tryParseJSON } from './utils.js';
+import { isDrawReason, isGameStateMessage, parseLogDate, tryParseJSON } from './utils.js';
 import { createGameDataCollector } from './gameDataParser.js';
 import { createBoardStateCollector } from './boardStateParser.js';
 import { handleParseDeck } from './deckParser.js';
@@ -109,7 +109,15 @@ function handleParseRankInfoEntry(entry: string, session: Session): void {
       typeof rankInfo.constructedLevel === 'number' ? rankInfo.constructedLevel : null,
     constructedStep:
       typeof rankInfo.constructedStep === 'number' ? rankInfo.constructedStep : null,
-  });
+          // The log reports 0 for "not applicable", so treat it as missing.
+          constructedPercentile:
+            typeof rankInfo.constructedPercentile === 'number' && rankInfo.constructedPercentile > 0
+              ? rankInfo.constructedPercentile
+              : null,
+          constructedLeaderboardPlace:
+            typeof rankInfo.constructedLeaderboardPlace === 'number' && rankInfo.constructedLeaderboardPlace > 0
+              ? rankInfo.constructedLeaderboardPlace
+              : null,  });
   session.pendingRankMatchId = null;
 }
 
@@ -281,7 +289,7 @@ export async function parseAllLogsWithDebug(config: ParseConfig): Promise<ParseR
       rawReason === 'ResultReason_Life' ? 'life' :
       rawReason === 'ResultReason_Concede' ? 'concede' :
       rawReason === 'ResultReason_Timeout' ? 'timeout' :
-      rawReason === 'ResultReason_Draw' ? 'draw' : 'unknown';
+      isDrawReason(rawReason) ? 'draw' : 'unknown';
     return { ...s, gameEndReason };
   });
 
