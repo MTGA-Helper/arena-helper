@@ -86,6 +86,168 @@ async def deck_lab_page() -> HTMLResponse:
     return HTMLResponse(html_path.read_text(encoding="utf-8"))
 
 
+FORMAT_COLUMNS = {"standard", "alchemy", "explorer", "historic", "timeless", "brawl"}
+
+
+def analyze_deck_data(fmt: str, mainboard, sideboard, card_index: dict) -> dict:
+    """Pure deck analysis: legality, Arena translation, and breakdowns.
+
+    card_index maps lowercased card name -> {
+        name, colors, color_identity, types, mana_cost, mana_value,
+        cheapest_rarity, sets, legalities {format: bool}, tags [str]
+    } built by the DB layer. Kept pure so the math is testable without a DB.
+    """
+    rank = {"common": 0, "uncommon": 1, "rare": 2, "mythic": 3}
+    violations = []
+    main_count = sum(q for q, _ in mainboard)
+    side_count = sum(q for q, _ in sideboard)
+    if main_count < 60:
+        violations.append({"type": "mainboard_size", "detail": f"Mainboard has {main_count} cards; {fmt} requires at least 60."})
+    if side_count > 15:
+        violations.append({"type": "sideboard_size", "detail": f"Sideboard has {side_count} cards; maximum is 15."})
+
+    copies: dict[str, int] = {}
+    for qty, name in list(mainboard) + list(sideboard):
+        copies[name.strip().lower()] = copies.get(name.strip().lower(), 0) + qty
+
+    cards_out = []
+    color_cards = {"W": 0, "U": 0, "B": 0, "R": 0, "G": 0}
+    pips = {"W": 0, "U": 0, "B": 0, "R": 0, "G": 0}
+    type_counts: dict[str, int] = {}
+    curve: dict[str, int] = {}
+    tag_counts: dict[str, int] = {}
+    seen = set()
+    for qty, name in list(mainboard) + list(sideboard):
+        key = name.strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        info = card_index.get(key)
+        in_main = sum(q for q, n in mainboard if n.strip().lower() == key)
+        if info is None:
+            violations.append({"type": "unknown_card", "card": name, "detail": f"{name} is not in the card database."})
+            cards_out.append({"name": name, "on_arena": False, "cheapest_rarity": None, "sets": [], "legal_in_format": False})
+            continue
+        types = [str(t) for t in (info.get("types") or [])]
+        is_basic = any("basic" in t.lower() for t in types)
+        if copies.get(key, 0) > 4 and not is_basic:
+            violations.append({"type": "copy_limit", "card": info["name"], "detail": f"{copies[key]} copies of {info['name']}; maximum is 4 (mainboard + sideboard)."})
+        legal = bool((info.get("legalities") or {}).get(fmt, False))
+        if not legal:
+            violations.append({"type": "not_legal_in_format", "card": info["name"], "detail": f"{info['name']} is not legal in {fmt}."})
+        cards_out.append({
+            "name": info["name"],
+            "on_arena": bool(info.get("sets")),
+            "cheapest_rarity": info.get("cheapest_rarity"),
+            "sets": info.get("sets") or [],
+            "legal_in_format": legal,
+        })
+        if in_main:
+            for c in info.get("color_identity") or []:
+                if c in color_cards:
+                    color_cards[c] += in_main
+            for ch in (info.get("mana_cost") or ""):
+                if ch in pips:
+                    pips[ch] += in_main
+            is_land = any("land" in t.lower() for t in types)
+            for t in types:
+                tl = t.lower()
+                for bucket in ("creature", "instant", "sorcery", "artifact", "enchantment", "planeswalker", "land", "battle"):
+                    if bucket in tl:
+                        type_counts[bucket] = type_counts.get(bucket, 0) + in_main
+            if not is_land:
+                mv = int(info.get("mana_value") or 0)
+                bucket = str(min(mv, 7))
+                curve[bucket] = curve.get(bucket, 0) + in_main
+            for tag in info.get("tags") or []:
+                tag_counts[tag] = tag_counts.get(tag, 0) + in_main
+
+    themes = [t for t, _ in sorted(tag_counts.items(), key=lambda kv: -kv[1])[:6]]
+    return {
+        "format": fmt,
+        "mainboard_count": main_count,
+        "sideboard_count": side_count,
+        "legality": {"legal": not violations, "violations": violations},
+        "cards": cards_out,
+        "breakdown": {
+            "colors_by_identity": color_cards,
+            "mana_pips": pips,
+            "types": type_counts,
+            "mana_curve_nonland": curve,
+            "themes": themes,
+        },
+    }
+
+
+class AnalyzeRequest(BaseModel):
+    format: str = "standard"
+    mainboard: list[Any]
+    sideboard: list[Any] = []
+
+
+@router.post("/api/deck-lab/analyze-deck")
+async def analyze_deck(body: AnalyzeRequest):
+    fmt = body.format.strip().lower()
+    if fmt not in FORMAT_COLUMNS:
+        raise HTTPException(status_code=400, detail=f"Unsupported format '{body.format}'. Supported: {sorted(FORMAT_COLUMNS)}.")
+    from apps.api.models import Card, CardLegality, CardPrint, CardTag
+
+    def norm_rows(rows):
+        out = []
+        for qty, name in rows:
+            out.append((int(qty), str(name)))
+        return out
+
+    mainboard = norm_rows(body.mainboard)
+    sideboard = norm_rows(body.sideboard)
+    names = {n.strip().lower() for _, n in mainboard + sideboard}
+    rank = {"common": 0, "uncommon": 1, "rare": 2, "mythic": 3}
+    card_index: dict = {}
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(
+                Card.name, Card.colors, Card.color_identity, Card.types,
+                Card.mana_cost, Card.mana_value,
+                CardPrint.rarity, CardPrint.set_code,
+                CardLegality.standard, CardLegality.alchemy, CardLegality.explorer,
+                CardLegality.historic, CardLegality.timeless, CardLegality.brawl,
+                CardTag.tag,
+            )
+            .join(CardPrint, CardPrint.card_id == Card.id, isouter=True)
+            .join(CardLegality, CardLegality.card_id == Card.id, isouter=True)
+            .join(CardTag, CardTag.card_id == Card.id, isouter=True)
+        )
+        for row in result.all():
+            key = row[0].strip().lower()
+            if key not in names:
+                continue
+            entry = card_index.setdefault(key, {
+                "name": row[0], "colors": row[1] or [], "color_identity": row[2] or [],
+                "types": row[3] or [], "mana_cost": row[4] or "", "mana_value": row[5] or 0,
+                "cheapest_rarity": None, "sets": [], "tags": [],
+                "legalities": {"standard": bool(row[8]), "alchemy": bool(row[9]),
+                               "explorer": bool(row[10]), "historic": bool(row[11]),
+                               "timeless": bool(row[12]), "brawl": bool(row[13])},
+            })
+            rarity = (row[6] or "").strip().lower()
+            if rarity in rank and (entry["cheapest_rarity"] is None or rank[rarity] < rank[entry["cheapest_rarity"]]):
+                entry["cheapest_rarity"] = rarity
+            if row[7] and row[7] not in entry["sets"]:
+                entry["sets"].append(row[7])
+            if row[14] and row[14] not in entry["tags"]:
+                entry["tags"].append(row[14])
+    return analyze_deck_data(fmt, mainboard, sideboard, card_index)
+
+
+@router.get("/api/deck-lab/winners")
+async def winners_library():
+    """Dated library of recent tournament-winning decklists (file-backed)."""
+    lib_path = Path(__file__).parent / "winners_library_standard.json"
+    if not lib_path.exists():
+        return {"compiled_date": None, "format": None, "decks": []}
+    return json.loads(lib_path.read_text(encoding="utf-8"))
+
+
 class RarityRequest(BaseModel):
     names: list[str]
 

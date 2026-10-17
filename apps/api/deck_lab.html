@@ -34,7 +34,14 @@
   th { color: var(--dim); font-weight: 600; }
   label.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
   label.check input { margin-top: 3px; width: 18px; height: 18px; }
-</style>
+.analysis-box { margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
+    .viol { margin: 4px 0 0 16px; font-size: 12px; color: #b91c1c; }
+    .curve { margin-top: 6px; font-family: ui-monospace, monospace; font-size: 11px; }
+    .crow { display: flex; gap: 6px; align-items: baseline; }
+    .ckey { width: 14px; color: #64748b; }
+    .cbar { color: #2563eb; letter-spacing: -1px; }
+    button.analyzeBtn { background: #e2e8f0; color: #0f172a; padding: 4px 10px; font-size: 12px; margin-top: 6px; }
+  </style>
 </head>
 <body>
 <div class="wrap">
@@ -86,6 +93,12 @@
       <button class="secondary" id="rankCompletion" type="button">Rank by completion</button>
       <button class="secondary" id="rankCost" type="button">Rank by cheapest to finish</button>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>Latest winners</h2>
+    <p class="fineprint" id="winnersStatus">Loading tournament-winning decklists…</p>
+    <div id="winnersList"></div>
   </div>
 
   <div class="panel" id="decksPanel" style="display:none">
@@ -249,7 +262,9 @@ async function render() {
       <div class="bar"><div style="width:${a.completion.toFixed(1)}%"></div></div>
       <span class="chip">Missing wildcards: <b>${a.cost.mythic}M ${a.cost.rare}R ${a.cost.uncommon}U ${a.cost.common}C</b></span>
       <span class="chip">Burden <b>${a.burden.toFixed(1)}</b></span>
-      <div class="missing">${miss}</div>`;
+      <div class="missing">${miss}</div>
+      <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+    div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(deck, div.querySelector(".analysis")));
     list.appendChild(div);
   }
   if (sorted.length) {
@@ -311,7 +326,9 @@ async function renderMeta() {
       <span class="chip">Wildcards needed: <b>${a.cost.mythic} mythic · ${a.cost.rare} rare · ${a.cost.uncommon} uncommon · ${a.cost.common} common</b></span>
       <span class="chip">Burden <b>${a.burden.toFixed(1)}</b></span>
       <div class="missing">${miss}</div>
-      <div class="fineprint">List source: ${d.source || "meta snapshot"}${d.source_url ? ` · <a href="${d.source_url}" target="_blank" rel="noopener">source list</a>` : ""}</div>`;
+      <div class="fineprint">List source: ${d.source || "meta snapshot"}${d.source_url ? ` · <a href="${d.source_url}" target="_blank" rel="noopener">source list</a>` : ""}</div>
+      <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+    div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(d, div.querySelector(".analysis")));
     box.appendChild(div);
   });
   if (!box.children.length) box.innerHTML = "<p class='sub'>No meta decks match this filter.</p>";
@@ -405,7 +422,63 @@ $("loadBackend").addEventListener("click", async () => {
   }
 });
 render();
+function breakdownHTML(a) {
+  const b = a.breakdown;
+  const colorNames = { W: "White", U: "Blue", B: "Black", R: "Red", G: "Green" };
+  const colors = Object.entries(b.colors_by_identity).filter(([, n]) => n > 0).map(([c, n]) => `${colorNames[c]} ${n}`).join(" · ") || "Colorless";
+  const types = Object.entries(b.types).sort((x, y) => y[1] - x[1]).map(([t, n]) => `${t} ${n}`).join(" · ");
+  const curveMax = Math.max(1, ...Object.values(b.mana_curve_nonland));
+  const curve = ["0","1","2","3","4","5","6","7"].map(k => {
+    const n = b.mana_curve_nonland[k] || 0;
+    return `<div class="crow"><span class="ckey">${k}${k === "7" ? "+" : ""}</span><span class="cbar">${"▓".repeat(Math.round(14 * n / curveMax))}</span><span>${n}</span></div>`;
+  }).join("");
+  const notOnArena = a.cards.filter(c => !c.on_arena).map(c => c.name);
+  const legal = a.legality.legal
+    ? `<span class="status ok">✓ ${esc(a.format)} legal — ${a.mainboard_count} + ${a.sideboard_count}</span>`
+    : `<span class="status far">✗ Not ${esc(a.format)} legal</span><ul class="viol">${a.legality.violations.map(v => `<li>${esc(v.detail)}</li>`).join("")}</ul>`;
+  return `<div class="analysis-box">${legal}
+    <p class="fineprint" style="margin-top:6px"><strong>Colors:</strong> ${esc(colors)} &nbsp; <strong>Types:</strong> ${esc(types)}</p>
+    ${b.themes.length ? `<p class="fineprint"><strong>Themes:</strong> ${b.themes.map(esc).join(", ")}</p>` : ""}
+    ${notOnArena.length ? `<p class="fineprint"><strong>Not on MTGA:</strong> ${notOnArena.map(esc).join(", ")}</p>` : ""}
+    <div class="curve">${curve}</div></div>`;
+}
+
+async function runAnalysis(deck, target) {
+  target.innerHTML = `<p class="fineprint">Analyzing against the card database…</p>`;
+  try {
+    const r = await fetch("/api/deck-lab/analyze-deck", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format: (deck.format || "Standard").toLowerCase(), mainboard: deck.mainboard, sideboard: deck.sideboard || [] }) });
+    if (!r.ok) throw new Error("analyze " + r.status);
+    target.innerHTML = breakdownHTML(await r.json());
+  } catch (e) { target.innerHTML = `<p class="fineprint">Analysis unavailable right now.</p>`; }
+}
+
+async function loadWinners() {
+  const box = $("winnersList");
+  try {
+    const r = await fetch("/api/deck-lab/winners");
+    if (!r.ok) throw new Error("winners " + r.status);
+    const lib = await r.json();
+    const decks = lib.decks || [];
+    if (!decks.length) { $("winnersStatus").textContent = "No winners library loaded yet."; return; }
+    $("winnersStatus").textContent = `Tournament winners · compiled ${lib.compiled_date || ""} · checked against your collection.`;
+    await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
+    box.innerHTML = "";
+    for (const d of decks) {
+      const a = await analyze(d);
+      const st = metaStatusOf(a);
+      const div = document.createElement("div");
+      div.className = "deck";
+      div.innerHTML = `<div class="dhead"><span class="dname">${esc(d.name)}</span><span class="status ${st.cls}">${st.label}</span></div>
+        <p class="fineprint">${esc(d.event || "")} · ${esc(d.placement || "")} · ${esc(d.pilot || "")} · ${esc(d.event_date || "")} · Completion ${a.completion.toFixed(0)}% · Wildcards ${wcText(a.cost)}</p>
+        <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+      div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(d, div.querySelector(".analysis")));
+      box.appendChild(div);
+    }
+  } catch (e) { $("winnersStatus").textContent = "Winners library unavailable right now."; }
+}
+
 loadMeta();
+loadWinners();
 </script>
 </body>
 </html>
