@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def generate_recommendations():
     print("[*] Starting Recommendation Engine V1 (Normalized Rarity Mode)...")

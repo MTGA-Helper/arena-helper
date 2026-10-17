@@ -5,9 +5,9 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 
-from database import get_db, engine, Base
-from models import User
-from schemas import UserCreate, UserLogin, Token
+from apps.api.database import get_db, engine, Base
+from apps.api.models import User
+from apps.api.schemas import UserCreate, UserLogin, Token
 
 try:
     Base.metadata.create_all(bind=engine)
@@ -37,6 +37,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 @router.post("/register", status_code=201)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     try:
+        print("--- AUTH REQUEST DIAGNOSTICS ---")
+        print("DB BIND:", db.get_bind().url)
+        print("USER MODULE:", User.__module__)
+        print("USER TABLE:", User.__table__)
+        print("--------------------------------")
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -75,3 +80,7 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
         print("LOGIN EXCEPTION:")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+
