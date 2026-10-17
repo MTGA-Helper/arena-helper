@@ -37,9 +37,11 @@ def send_verification_email(email: str, token: str) -> None:
         "This link expires in 24 hours."
     )
 
+    import ssl
+
     with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as smtp:
         smtp.ehlo()
-        smtp.starttls()
+        smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         if smtp_user and smtp_password:
             smtp.login(smtp_user, smtp_password)
