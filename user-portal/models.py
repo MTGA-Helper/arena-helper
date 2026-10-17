@@ -35,6 +35,6 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     mtg_player_id = Column(String, unique=True, nullable=True)
     display_player_id = Column(String, nullable=True)
-    is_email_verified = Column(Boolean, nullable=False, default=False)
+    is_email_verified = Column(Boolean, nullable=False, default=False, server_default="0")
     verification_token_hash = Column(String, nullable=True)
     verification_expires_at = Column(DateTime(timezone=True), nullable=True)
