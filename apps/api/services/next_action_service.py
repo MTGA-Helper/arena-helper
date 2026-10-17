@@ -1,5 +1,5 @@
-﻿"""
-Next Action Service - V2.6 Milestone B3 (Card-Level Resolution via Upgrade API)
+"""
+Next Action Service - V2.6 Milestone B3 (Card-Level Resolution via /recommendations/decks)
 """
 import math
 import httpx
@@ -13,47 +13,40 @@ def calculate_roi_score(completion_gain, cost, rarity):
 
 async def fetch_live_candidates():
     """
-    Milestone B3 Bridge: Pulls deck recommendations and queries /api/upgrade/{deck} 
-    for precise, card-level missing deficits.
+    Milestone B3 Bridge: Pulls deck recommendations from /recommendations/decks
+    and extracts card-level missing deficits directly with proper rarity filtering.
     """
     candidates = []
     try:
         async with httpx.AsyncClient() as client:
-            # 1. Fetch overall deck recommendations
-            resp = await client.get("http://127.0.0.1:8000/api/recommendations")
+            resp = await client.get("http://127.0.0.1:8000/recommendations/decks")
             if resp.status_code == 200:
-                data = resp.json()
-                decks = data.get("recommendations", [])
-                
-                # 2. Iterate through incomplete decks and query their upgrade endpoint for specific cards
-                for deck_item in decks[:5]:  # Inspect top 5 recommendation candidates
-                    deck_name = deck_item.get("deck")
-                    completion = deck_item.get("completion_score", 0.0)
-                    
-                    if completion < 100.0 and deck_name:
-                        encoded_deck = deck_name.replace(" ", "%20")
-                        up_resp = await client.get(f"http://127.0.0.1:8000/api/upgrade/{encoded_deck}")
-                        
-                        if up_resp.status_code == 200:
-                            up_data = up_resp.json()
-                            missing_cards = up_data.get("missing_cards", [])
-                            base_gain = max(0.5, (100.0 - completion) / 10.0)
-                            
-                            for mc in missing_cards:
-                                c_name = mc.get("name")
-                                deficit = mc.get("missing", 1)
-                                rarity = mc.get("rarity", "rare").lower()
-                                
-                                candidates.append({
-                                    "deck_name": deck_name,
-                                    "card_name": c_name,
-                                    "rarity": rarity if rarity in ["rare", "mythic", "uncommon"] else "rare",
-                                    "deficit": deficit,
-                                    "base_completion_gain": base_gain
-                                })
-                                
+                decks = resp.json()
+                if isinstance(decks, list):
+                    for deck_item in decks[:5]:
+                        deck_name = deck_item.get("deck_name")
+                        completion = deck_item.get("completion_percent", 0.0)
+                        missing_cards = deck_item.get("missing_cards", [])
+                        base_gain = max(0.5, (100.0 - completion) / 10.0)
+
+                        for mc in missing_cards:
+                            c_name = mc.get("name")
+                            deficit = mc.get("quantity", 1)
+                            rarity = mc.get("rarity", "rare").lower()
+                            if rarity not in ("rare", "mythic", "uncommon"):
+                                continue
+
+                            candidates.append({
+                                "deck_name": deck_name,
+                                "card_name": c_name,
+                                "rarity": rarity,
+                                "deficit": deficit,
+                                "base_completion_gain": base_gain
+                            })
     except Exception as e:
-        print(f"Error fetching live candidates: {e}")
+        import traceback
+        print(f"Error fetching live candidates: {repr(e)}")
+        traceback.print_exc()
 
     if candidates:
         return candidates
@@ -83,7 +76,7 @@ async def get_next_action():
             min(2, deficit),
             deficit
         }))
-        
+
         card_name = candidate["card_name"]
         rarity = candidate["rarity"]
         deck_name = candidate["deck_name"]
@@ -93,7 +86,7 @@ async def get_next_action():
             simulated_gain = base_gain * (opt_cost / 1.0)
             roi_score = calculate_roi_score(simulated_gain, opt_cost, rarity)
             roi_per_wc = roi_score / opt_cost
-            
+
             evaluated_summary.append(f"{card_name} ({deck_name}) [Cost: {opt_cost}] -> ROI/WC: {round(roi_per_wc, 1)}")
 
             if roi_per_wc > best_overall_roi_per_wc:

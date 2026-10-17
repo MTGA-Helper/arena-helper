@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from typing import List, Optional, Dict, Any
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 class MatchIngestRequest(BaseModel):
     user_id: str = Field(..., description="UUID of the authenticated user")
