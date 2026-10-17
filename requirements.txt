@@ -1,0 +1,17 @@
+alembic==1.20.0
+asyncpg==0.31.0
+bcrypt==5.0.0
+fastapi
+greenlet==3.5.5
+httpx
+Mako==1.4.1
+MarkupSafe==3.0.3
+passlib==1.7.4
+psycopg2-binary==2.9.13
+pydantic-settings
+python-multipart
+python-dotenv==1.2.3
+SQLAlchemy==2.0.52
+structlog
+typing_extensions==4.16.0
+uvicorn[standard]

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your account | Arena Helper</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211b;
+      --muted: #647066;
+      --paper: #f4f1e8;
+      --panel: #fffdf7;
+      --line: #d9ded3;
+      --green: #1f674d;
+      --green-dark: #174938;
+      --gold: #d59a38;
+      --error: #a2392f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: radial-gradient(circle at 85% 10%, #e6eee0 0, transparent 38%), var(--paper);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px clamp(18px, 5vw, 72px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 253, 247, .84);
+    }
+    .brand { color: var(--green); font: 700 13px system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    .menu { position: relative; }
+    .menu-button {
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: 10px 13px;
+      color: var(--ink);
+      background: var(--panel);
+      cursor: pointer;
+      font: 700 14px system-ui, sans-serif;
+    }
+    .menu-button:hover, .menu-button:focus { border-color: var(--green); }
+    .menu-panel {
+      position: absolute;
+      z-index: 2;
+      top: calc(100% + 8px);
+      right: 0;
+      display: none;
+      min-width: 150px;
+      padding: 7px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 12px 28px rgba(23, 33, 27, .12);
+    }
+    .menu-panel.open { display: block; }
+    .logout {
+      width: 100%;
+      border: 0;
+      padding: 9px 10px;
+      color: var(--error);
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      font: 600 14px system-ui, sans-serif;
+    }
+    .logout:hover { background: #f5e7e2; }
+    .delete-account { display: block; width: 100%; padding: 9px 10px; color: var(--error); background: transparent; text-decoration: none; font: 600 14px system-ui, sans-serif; }
+    .delete-account:hover { background: #f5e7e2; }
+    main { width: min(100% - 32px, 900px); margin: 0 auto; padding: 48px 0 64px; }
+    .eyebrow { margin: 0 0 10px; color: var(--green); font: 700 12px system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 0 0 8px; font-size: clamp(34px, 7vw, 56px); line-height: 1; }
+    .intro { margin: 0 0 28px; color: var(--muted); font: 16px/1.5 system-ui, sans-serif; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 22px; }
+    section { padding: clamp(22px, 4vw, 34px); border: 1px solid var(--line); border-top: 4px solid var(--gold); background: var(--panel); box-shadow: 0 18px 50px rgba(23, 33, 27, .08); }
+    h2 { margin: 0 0 22px; font-size: 25px; }
+    .details { display: grid; gap: 16px; margin: 0; }
+    .detail { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    dt { margin-bottom: 5px; color: var(--muted); font: 700 12px system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+    dd { margin: 0; overflow-wrap: anywhere; font: 16px/1.4 system-ui, sans-serif; }
+    .field { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 7px; font: 700 14px/1.2 system-ui, sans-serif; }
+    input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #bfc9bc; border-radius: 3px; font: 16px system-ui, sans-serif; }
+    input:focus { outline: 3px solid rgba(213, 154, 56, .28); border-color: var(--green); }
+    .hint { margin: 7px 0 0; color: var(--muted); font: 12px/1.45 system-ui, sans-serif; }
+    button[type="submit"] { width: 100%; min-height: 46px; border: 0; border-radius: 3px; color: white; background: var(--green); cursor: pointer; font: 700 14px system-ui, sans-serif; }
+    button[type="submit"]:hover { background: var(--green-dark); }
+    button:disabled { cursor: wait; opacity: .65; }
+    #message { min-height: 22px; margin: 16px 0 0; font: 14px/1.45 system-ui, sans-serif; }
+    #message.error { color: var(--error); }
+    #message.success { color: var(--green); }
+    @media (max-width: 700px) { header { align-items: flex-start; } .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Arena Helper</div>
+    <div class="menu">
+      <button class="menu-button" id="menu-button" type="button" aria-expanded="false">Hi <span id="display-name">there</span> &#9662;</button>
+      <div class="menu-panel" id="menu-panel">
+        <button class="logout" id="logout" type="button">Log out</button>
+        <a class="delete-account" href="/delete_account.html">Delete account</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <p class="eyebrow">Account</p>
+    <h1>Your profile</h1>
+    <p class="intro">Your account information is shown below. Passwords are never displayed.</p>
+
+    <div class="layout">
+      <section>
+        <h2>Account information</h2>
+        <dl class="details">
+          <div class="detail"><dt>Email</dt><dd id="email">Loading...</dd></div>
+        </dl>
+        <form id="display-form" novalidate>
+          <div class="field"><label for="display_player_id">Display Player ID</label><input id="display_player_id" name="display_player_id" type="text" maxlength="100" required></div>
+          <button type="submit">Save display name</button>
+          <p id="display-message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section>
+        <h2>Change password</h2>
+        <form id="password-form" novalidate>
+          <div class="field"><label for="current_password">Current password</label><input id="current_password" name="current_password" type="password" autocomplete="current-password" required></div>
+          <div class="field"><label for="new_password">New password</label><input id="new_password" name="new_password" type="password" minlength="12" autocomplete="new-password" required><p class="hint">12+ characters with lowercase, uppercase, a number, and a special character.</p></div>
+          <div class="field"><label for="new_password_verification">Verify new password</label><input id="new_password_verification" name="new_password_verification" type="password" autocomplete="new-password" required></div>
+          <button type="submit">Change password</button>
+          <p id="message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const tokenKey = "arena_helper_access_token";
+    const token = sessionStorage.getItem(tokenKey);
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,}$/;
+    const message = document.querySelector("#message");
+    const displayMessage = document.querySelector("#display-message");
+
+    if (!token) window.location.replace("/");
+
+    async function loadProfile() {
+      const response = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+      if (response.status === 401) { sessionStorage.removeItem(tokenKey); window.location.replace("/"); return; }
+      const profile = await response.json();
+      document.querySelector("#display-name").textContent = profile.display_player_id || "there";
+      document.querySelector("#email").textContent = profile.email;
+      document.querySelector("#display_player_id").value = profile.display_player_id || "";
+    }
+
+    loadProfile().catch(() => { message.textContent = "Unable to load your profile."; message.className = "error"; });
+
+    document.querySelector("#display-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(event.currentTarget));
+      const button = event.currentTarget.querySelector("button[type=submit]");
+      displayMessage.className = "";
+      button.disabled = true;
+      displayMessage.textContent = "Saving display name...";
+      try {
+        const response = await fetch("/auth/profile", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(values) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Unable to update display name.");
+        document.querySelector("#display-name").textContent = result.display_player_id || "there";
+        displayMessage.textContent = "Display name updated.";
+        displayMessage.className = "success";
+      } catch (error) {
+        displayMessage.textContent = error.message;
+        displayMessage.className = "error";
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector("#menu-button").addEventListener("click", () => {
+      const panel = document.querySelector("#menu-panel");
+      const open = panel.classList.toggle("open");
+      document.querySelector("#menu-button").setAttribute("aria-expanded", open);
+    });
+
+    document.querySelector("#logout").addEventListener("click", () => {
+      sessionStorage.removeItem(tokenKey);
+      window.location.replace("/");
+    });
+
+    document.querySelector("#password-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(event.currentTarget));
+      const button = event.currentTarget.querySelector("button[type=submit]");
+      message.className = "";
+      if (!passwordPattern.test(values.new_password)) {
+        message.textContent = "Use a 12+ character password with lowercase, uppercase, a number, and a special character.";
+        message.className = "error";
+        return;
+      }
+      if (values.new_password !== values.new_password_verification) {
+        message.textContent = "New passwords do not match.";
+        message.className = "error";
+        return;
+      }
+      button.disabled = true;
+      message.textContent = "Changing password...";
+      try {
+        const response = await fetch("/auth/change-password", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(values) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.detail || "Unable to change password.");
+        message.textContent = result.message;
+        message.className = "success";
+        document.querySelector("#password-form").reset();
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = "error";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
