@@ -1,0 +1,30 @@
+version: 2
+# Dependabot watches the dependency surfaces and opens update PRs against
+# dev (house topology: everything lands on dev first, main/stable only get
+# verified promotions). Weekly cadence keeps the queue small and reviewable.
+updates:
+  - package-ecosystem: "npm"
+    directory: "/mtga-log-parser"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/mtga-cards-database-generator"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/apps/api"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/user-portal"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "dev"
+    schedule:
+      interval: "weekly"
