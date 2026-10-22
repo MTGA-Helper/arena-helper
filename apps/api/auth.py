@@ -1,4 +1,4 @@
-﻿import traceback
+import traceback
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -18,7 +18,13 @@ except Exception as e:
 router = APIRouter(tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = "super-secret-key-change-me"
+# FIX (Oct 21, 2026, audit AU-1): was a hardcoded placeholder string in a
+# public repo - anyone could forge JWTs for any account. Now read from the
+# environment and fail fast: a missing or placeholder secret stops the boot.
+import os
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY or SECRET_KEY == "super-secret-key-change-me":
+    raise RuntimeError("SECRET_KEY env var must be set to a real secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -37,11 +43,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 @router.post("/register", status_code=201)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     try:
-        print("--- AUTH REQUEST DIAGNOSTICS ---")
-        print("DB BIND:", db.get_bind().url)
-        print("USER MODULE:", User.__module__)
-        print("USER TABLE:", User.__table__)
-        print("--------------------------------")
+        # FIX (Oct 21, 2026, audit AU-1): removed the registration diagnostics
+        # block - it printed the DB bind URL (credentials embedded) to stdout
+        # on every signup, leaking the connection string into server logs.
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
             raise HTTPException(status_code=400, detail="Email already registered")
@@ -57,8 +61,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         db.rollback()
-        print("REGISTRATION EXCEPTION:")
-        traceback.print_exc()
+        # FIX (Oct 21, 2026, audit AU-1): traceback print to stdout removed (log hygiene).
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.post("/login", response_model=Token)
@@ -77,7 +80,7 @@ def login_for_access_token(user_credentials: UserLogin, db: Session = Depends(ge
         raise
     except Exception as e:
         db.rollback()
-        print("LOGIN EXCEPTION:")
+        # FIX (Oct 21, 2026, audit AU-1): exception print to stdout removed (log hygiene).
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
