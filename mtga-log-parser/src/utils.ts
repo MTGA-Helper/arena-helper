@@ -4,6 +4,10 @@ export function gameKey(matchId: string, gameNumber: number): string {
   return `${matchId}:${gameNumber}`;
 }
 
+export function isDrawReason(reason: string): boolean {
+  return reason.toLowerCase().endsWith('draw');
+}
+
 export function computeMatchResult(g1: GameResult, g2: GameResult, g3: GameResult): MatchResult {
   if (g1 === null) return null;
 
@@ -34,12 +38,42 @@ export function parseLogDate(filename: string): number {
 export function tryParseJSON(line: string, onError?: () => void): unknown {
   const start = line.indexOf('{');
   if (start === -1) return null;
+  const candidate = line.slice(start);
   try {
-    return JSON.parse(line.slice(start));
+    return JSON.parse(candidate);
   } catch {
+    // MTGA sometimes logs a diagnostic line (e.g. "Couldn't find affector id ...") right after
+    // a JSON entry; retry with only the first balanced object so those events aren't lost.
+    const end = findJsonObjectEnd(candidate);
+    if (end !== -1 && end < candidate.length) {
+      try {
+        return JSON.parse(candidate.slice(0, end));
+      } catch {
+        // fall through to the error handler
+      }
+    }
     onError?.();
     return null;
   }
+}
+
+function findJsonObjectEnd(text: string): number {
+  let depth = 0;
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === '\\') i++;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') {
+      inString = true;
+    } else if (ch === '{') {
+      depth++;
+    } else if (ch === '}' && --depth === 0) {
+      return i + 1;
+    }
+  }
+  return -1;
 }
 
 export function isGameStateMessage(msg: Record<string, unknown>): boolean {
