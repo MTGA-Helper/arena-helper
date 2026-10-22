@@ -1,4 +1,4 @@
-﻿import os
+import os
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -10,7 +10,10 @@ from models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key-change-me")
+# FIX (Oct 21, 2026, audit AU-1): placeholder default removed - fail fast.
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+if not SECRET_KEY or SECRET_KEY == "super-secret-key-change-me":
+    raise RuntimeError("SECRET_KEY env var must be set to a real secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
