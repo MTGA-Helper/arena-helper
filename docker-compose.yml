@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   setup:
+    profiles: ["elk"]
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
@@ -58,6 +59,7 @@ services:
       retries: 120
 
   es01:
+    profiles: ["elk"]
     depends_on:
       setup:
         condition: service_healthy
@@ -102,6 +104,7 @@ services:
       timeout: 10s
       retries: 120
   kibana:
+    profiles: ["elk"]
     depends_on:
       es01:
         condition: service_healthy
@@ -136,6 +139,7 @@ services:
       retries: 120
 
   logstash01:
+    profiles: ["elk"]
     depends_on:
       es01:
         condition: service_healthy
