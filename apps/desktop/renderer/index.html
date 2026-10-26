@@ -10,12 +10,25 @@
   .status .ok { color: #137333; font-weight: 600; }
   .status .bad { color: #b3261e; font-weight: 600; }
   section { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; max-width: 480px; }
+  section.wide { max-width: 720px; }
   label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; }
   input { width: 100%; padding: 0.45rem; box-sizing: border-box; }
   button { margin-top: 0.75rem; padding: 0.5rem 1rem; cursor: pointer; }
   .error { color: #b3261e; min-height: 1.2em; font-size: 0.9rem; }
   ul { padding-left: 1.2rem; }
   .hidden { display: none; }
+  .stats-grid { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin: 0.5rem 0; }
+  .stats-grid div span { display: block; font-size: 1.25rem; font-weight: 600; }
+  .stats-grid div small { color: #444; }
+  .agree { color: #137333; font-weight: 600; }
+  .disagree { color: #b3261e; font-weight: 600; }
+  #collection-list { max-height: 320px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 0.5rem 0.75rem; }
+  #collection-list table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  #collection-list td, #collection-list th { text-align: left; padding: 0.2rem 0.4rem; border-bottom: 1px solid #f0f0f0; }
+  #collection-list td.qty, #collection-list th.qty { text-align: right; width: 3rem; }
+  .row { display: flex; gap: 0.5rem; align-items: end; }
+  .row input { flex: 1; }
+  .note { color: #444; font-size: 0.85rem; }
 </style>
 </head>
 <body>
@@ -37,13 +50,39 @@
     </form>
   </section>
 
-  <section id="home-view" class="hidden">
+  <section id="home-view" class="hidden wide">
     <h2 id="welcome">Signed in</h2>
     <p id="decks-summary">Loading decks…</p>
     <ul id="decks-list"></ul>
     <button type="button" id="logout-btn">Sign out</button>
   </section>
 
+  <section id="collection-view" class="hidden wide">
+    <h2>Collection</h2>
+    <div class="stats-grid">
+      <div><span id="stat-total">–</span><small>Total cards</small></div>
+      <div><span id="stat-unique">–</span><small>Unique cards</small></div>
+      <div><span id="stat-rares">–</span><small>Rares</small></div>
+      <div><span id="stat-mythics">–</span><small>Mythics</small></div>
+      <div><span id="stat-wildcards">–</span><small>Wildcards (R / M)</small></div>
+    </div>
+    <p id="collection-reconcile" class="note">Loading collection…</p>
+    <div class="row">
+      <div style="flex:1">
+        <label for="collection-search">Filter by name</label>
+        <input id="collection-search" type="search" placeholder="Start typing a card name…">
+      </div>
+      <button type="button" id="collection-refresh-btn">Refresh</button>
+      <button type="button" id="collection-upload-btn">Upload / replace from CSV…</button>
+    </div>
+    <p class="note">Uploading a CSV replaces the collection on the engine with the file's contents.</p>
+    <p id="collection-upload-result" class="note"></p>
+    <p id="collection-showing" class="note"></p>
+    <div id="collection-list"></div>
+    <p class="error" id="collection-error"></p>
+  </section>
+
+<script src="collectionLogic.js"></script>
 <script src="renderer.js"></script>
 </body>
 </html>
