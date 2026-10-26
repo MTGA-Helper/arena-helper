@@ -1,0 +1,33 @@
+# Arena Helper desktop packaging (Slice 6, Oct 26, 2026).
+# Added for the Alpha gate: electron-builder turns the Slice 1-5 shell
+# into installable artifacts. Alpha builds are UNSIGNED on purpose —
+# code signing / notarization is a Release-gate item, not Alpha scope.
+# Windows: signAndEditExecutable is off so the NSIS build does not need
+# Wine/rcedit on the Mac build machine; the installer still installs
+# and runs, Windows just shows the standard unknown-publisher prompt.
+appId: app.arena-helper.desktop
+productName: Arena Helper
+directories:
+  output: dist
+files:
+  - main.js
+  - api.js
+  - preload.js
+  - watcher.js
+  - watcherParse.js
+  - renderer/**
+  - package.json
+mac:
+  category: public.app-category.utilities
+  identity: null
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+  signAndEditExecutable: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

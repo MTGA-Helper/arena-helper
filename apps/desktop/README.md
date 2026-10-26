@@ -1,4 +1,4 @@
-# Arena Helper — Desktop (Slices 1–4)
+# Arena Helper — Desktop (Slices 1–6)
 
 Native desktop shell for Arena Helper: Electron (Windows / macOS / Linux),
 a thin client over the live engine API. Slice 1 is the shell, the engine
@@ -41,6 +41,18 @@ npm start
 
 Engine base URL defaults to production (`https://arena-helper.onrender.com`);
 override with `ARENA_API_BASE` for a local API.
+
+
+## Package (Slice 6)
+
+```sh
+npm run dist:mac   # DMG + zip (arm64 on an Apple Silicon build machine)
+npm run dist:win   # NSIS installer (cross-built; unsigned)
+```
+
+Packaging is electron-builder, configured in `electron-builder.yml`.
+Alpha builds are unsigned on purpose — signing / notarization is a
+Release-gate item. Artifacts land in `dist/`.
 
 ## Verify
 
