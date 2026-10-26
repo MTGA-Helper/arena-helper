@@ -255,9 +255,13 @@ function rowsByName(list) {
       // Slice 4: the bill now tallies ALL FOUR rarities — Bolt's
       // 2 uncommon are counted (the pre-Slice-4 shape dropped them
       // silently) — and missing_cards carry craft rarities.
+      // FIX (Oct 26, 2026): completion_percent compared with the
+      // near() tolerance helper, not === -- 71.4 can arrive as
+      // 71.40000000000001 and fail strict equality on float
+      // representation alone. (Was: a.completion_percent === 71.4.)
       check("fixture Deck A list math", Boolean(a) &&
         a.cards_required === 14 && a.cards_owned === 10 &&
-        a.completion_percent === 71.4 &&
+        near(a.completion_percent, 71.4, 0.02) &&
         a.wildcard_cost.rare === 2 && a.wildcard_cost.mythic === 0 &&
         a.wildcard_cost.uncommon === 2 && a.wildcard_cost.common === 0 &&
         wildcardBill(a.wildcard_cost).total === 4 &&
@@ -301,9 +305,12 @@ function rowsByName(list) {
         const b = decks.find((d) => d.deck_name === "Fixture Wurm Ramp");
         check("fixture list holds the new Deck B", Boolean(b && b.deck_id === 3002),
           "decks=" + decks.map((d) => d.deck_name).join(", "));
+        // FIX (Oct 26, 2026): same float-tolerance fix as Deck A --
+        // near() instead of === on completion_percent.
+        // (Was: b.completion_percent === 72.7.)
         check("fixture Deck B list math", Boolean(b) &&
           b.cards_required === 11 && b.cards_owned === 8 &&
-          b.completion_percent === 72.7 &&
+          near(b.completion_percent, 72.7, 0.02) &&
           b.wildcard_cost.rare === 0 && b.wildcard_cost.mythic === 3 &&
           b.wildcard_cost.uncommon === 0 && b.wildcard_cost.common === 0 &&
           deckMath(b).agrees,
@@ -335,9 +342,13 @@ function rowsByName(list) {
         billText(jund && jund.wildcard_cost) ===
           "41 wildcards — 10 mythic · 25 rare · 5 uncommon · 1 common",
         billText(jund && jund.wildcard_cost));
+      // FIX (Oct 26, 2026): inline tolerance instead of === on
+      // completion_percent -- this block has no near() helper in
+      // scope, so use the same inline style as the final_score check
+      // in the decks-fixture block. (Was: === 42.3.)
       check("jund totals: 71 required / 30 owned / 42.3% / math ties out",
         Boolean(jund) && jund.cards_required === 71 && jund.cards_owned === 30 &&
-        jund.completion_percent === 42.3 && deckMath(jund).agrees,
+        Math.abs(jund.completion_percent - 42.3) <= 0.05 && deckMath(jund).agrees,
         JSON.stringify(jund && { r: jund.cards_required, o: jund.cards_owned, p: jund.completion_percent }));
 
       const detail = await api.deckDetail(jund.deck_id);

@@ -34,6 +34,7 @@ import os
 import sys
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 FIXTURE_USER_ID = "22222222-2222-2222-2222-222222222222"
 DECK_ID = 4001
@@ -75,6 +76,30 @@ def main():
     url = os.environ.get("SYNC_DATABASE_URL")
     if not url or "postgresql" not in url:
         print("Set SYNC_DATABASE_URL to the scratch Postgres clone first (see header).")
+        return 1
+    # FIX (Oct 26, 2026): hard allowlist BEFORE any DELETE can run.
+    # The gate above only checked the URL was set and mentioned
+    # "postgresql", so a SYNC_DATABASE_URL pointing at production (or
+    # any shared database) would have been wiped by the DELETEs below.
+    # Refuse unless BOTH hold, per the header example: the database
+    # name is exactly the scratch clone (arena_slice4) AND the target
+    # is local (the /tmp unix socket or the scratch port 54329).
+    _u = make_url(url)
+    _db_name = _u.database or ""
+    _host = _u.host or _u.query.get("host", "")
+    _port_raw = _u.port or _u.query.get("port", "")
+    try:
+        _port = int(_port_raw) if _port_raw else None
+    except (TypeError, ValueError):
+        _port = None
+    if not (_db_name == "arena_slice4" and (_host == "/tmp" or _port == 54329)):
+        print(
+            "ABORT: refusing to run the Jund fixture wipe against "
+            f"database={_db_name!r} host={_host!r} port={_port!r}. "
+            "This fixture only runs against the local scratch clone "
+            "(database 'arena_slice4' on the /tmp socket or port 54329; "
+            "see header). Nothing was deleted."
+        )
         return 1
     engine = create_engine(url)
     with engine.begin() as conn:
