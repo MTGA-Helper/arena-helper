@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Arena Helper</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; color: #1c1e21; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .status { color: #444; margin-bottom: 1.5rem; }
+  .status .ok { color: #137333; font-weight: 600; }
+  .status .bad { color: #b3261e; font-weight: 600; }
+  section { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; max-width: 480px; }
+  label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; }
+  input { width: 100%; padding: 0.45rem; box-sizing: border-box; }
+  button { margin-top: 0.75rem; padding: 0.5rem 1rem; cursor: pointer; }
+  .error { color: #b3261e; min-height: 1.2em; font-size: 0.9rem; }
+  ul { padding-left: 1.2rem; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+  <h1>Arena Helper</h1>
+  <p class="status" id="engine-status">Checking engine…</p>
+
+  <section id="auth-view">
+    <h2>Sign in</h2>
+    <form id="auth-form">
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="username">
+      <label for="password">Password</label>
+      <input id="password" type="password" required autocomplete="current-password">
+      <div>
+        <button type="submit" id="login-btn">Sign in</button>
+        <button type="button" id="register-btn">Create account</button>
+      </div>
+      <p class="error" id="auth-error"></p>
+    </form>
+  </section>
+
+  <section id="home-view" class="hidden">
+    <h2 id="welcome">Signed in</h2>
+    <p id="decks-summary">Loading decks…</p>
+    <ul id="decks-list"></ul>
+    <button type="button" id="logout-btn">Sign out</button>
+  </section>
+
+<script src="renderer.js"></script>
+</body>
+</html>
