@@ -37,7 +37,12 @@
   function filterCollection(list, query) {
     const q = String(query || "").trim().toLowerCase();
     if (!q) return list;
-    return list.filter((item) => item.name.toLowerCase().includes(q));
+    // FIX (hub #351): guard the list the same way summarizeCollection does
+    // above (a non-array payload crashed here), and tolerate nameless
+    // engine rows -- the old predicate threw on item.name mid-search and
+    // broke list rendering.
+    if (!Array.isArray(list)) return [];
+    return list.filter((item) => String((item && item.name) || "").toLowerCase().includes(q));
   }
 
   exports.summarizeCollection = summarizeCollection;
