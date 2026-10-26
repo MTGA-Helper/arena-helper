@@ -36,6 +36,10 @@ from sqlalchemy import create_engine, text
 FIXTURE_USER_ID = "11111111-1111-1111-1111-111111111111"
 
 STATEMENTS = [
+    # Slice 5: the watcher's tables reference cards too — clear them
+    # before the card wipe or the foreign key refuses it on re-runs.
+    "DELETE FROM user_deck_cards",
+    "DELETE FROM user_decks",
     "DELETE FROM user_collections",
     "DELETE FROM wildcard_inventories",
     "DELETE FROM card_prints",

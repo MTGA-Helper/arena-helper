@@ -103,6 +103,17 @@ class ApiClient {
       body: form,
     }));
   }
+
+  // Slice 5: the Arena Watcher's sync. The payload is built by
+  // watcherParse.buildPayload from Player.log state; the endpoint
+  // stores it per-deck / per-inventory (source-of-truth replace).
+  async syncWatcher(payload) {
+    return this.request("POST", "/watcher/sync", payload);
+  }
+
+  async watcherDecks() {
+    return this.request("GET", "/watcher/decks");
+  }
 }
 
 module.exports = { ApiClient, DEFAULT_BASE };

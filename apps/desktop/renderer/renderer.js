@@ -50,6 +50,7 @@ async function showHome() {
   $("collection-view").classList.remove("hidden");
   $("decks-view").classList.remove("hidden");
   $("recommendations-view").classList.remove("hidden");
+  $("watcher-view").classList.remove("hidden");
   $("welcome").textContent = "Signed in as " + session.data.email;
   const res = await window.arena.action("decks");
   if (res.ok) {
@@ -65,6 +66,7 @@ async function showHome() {
   loadCollection();
   loadDecks();
   loadNextAction();
+  loadWatcherStatus();
 }
 
 // --- Collection (Slice 2) ---------------------------------------------
@@ -358,6 +360,51 @@ async function loadNextAction() {
 
 $("next-action-refresh-btn").addEventListener("click", loadNextAction);
 
+// --- Arena Watcher (Slice 5) --------------------------------------------
+
+function renderWatcherStatus(data) {
+  const line = $("watcher-status-line");
+  const syncLine = $("watcher-sync-line");
+  if (!data.available) {
+    line.textContent = "Watcher unavailable: no Player.log path is known for this platform.";
+    syncLine.textContent = "";
+    return;
+  }
+  const w = data.watcher;
+  if (!w.found) {
+    line.textContent = "No Player.log found yet at " + w.logPath + " — start MTG Arena once and the watcher will pick it up.";
+  } else {
+    line.textContent =
+      "Watching " + w.logPath + " — " + w.deckCount + " deck(s) parsed, " +
+      w.stats.lines + " lines read, " + w.stats.malformed + " malformed line(s) skipped" +
+      (w.rotations ? ", " + w.rotations + " rotation(s)" : "") + ".";
+  }
+  const s = data.sync;
+  if (s.lastError) {
+    syncLine.textContent = "Last sync failed: " + s.lastError + (s.dirty ? " (will retry)" : "");
+  } else if (s.lastSummary) {
+    syncLine.textContent =
+      "Last sync " + s.lastSyncAt + ": " + s.lastSummary.decks_stored + " deck(s), " +
+      s.lastSummary.card_rows + " card rows (" + s.lastSummary.cards_matched + " matched, " +
+      s.lastSummary.cards_unmatched + " unmatched)" +
+      (s.lastSummary.wildcards_updated ? ", wildcards updated" : "") + ".";
+  } else {
+    syncLine.textContent = s.dirty ? "Parsed state is waiting to sync." : "Nothing synced yet this session.";
+  }
+}
+
+async function loadWatcherStatus() {
+  const res = await window.arena.action("watcher-status");
+  if (res.ok) {
+    $("watcher-error").textContent = "";
+    renderWatcherStatus(res.data);
+  } else {
+    $("watcher-error").textContent = res.error;
+  }
+}
+
+$("watcher-refresh-btn").addEventListener("click", loadWatcherStatus);
+
 // --- Auth (Slice 1) -----------------------------------------------------
 
 $("auth-form").addEventListener("submit", async (e) => {
@@ -392,6 +439,7 @@ $("logout-btn").addEventListener("click", async () => {
   $("collection-view").classList.add("hidden");
   $("decks-view").classList.add("hidden");
   $("recommendations-view").classList.add("hidden");
+  $("watcher-view").classList.add("hidden");
   $("auth-view").classList.remove("hidden");
 });
 

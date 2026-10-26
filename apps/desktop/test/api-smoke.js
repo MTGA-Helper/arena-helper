@@ -29,11 +29,24 @@
 //    Matt's deck must cost exactly 41 wildcards = 10M/25R/5U/1C
 //    through the app's own client + recommendationsLogic, and the
 //    next-action answer must be a real Jund candidate.
+//  - the Slice 5 watcher legs run only when ARENA_SMOKE_WATCHER=1,
+//    against a LOCAL api seeded by test/collection_fixture.py then
+//    test/watcher_fixture.py: the Player.log fixtures in
+//    test/fixtures/ are built from REAL log lines (real decks, real
+//    grpIds, real inventory values), and the legs prove the parse,
+//    the live tail (append, split line, rotation), and the sync
+//    round-trip into the API. Run the watcher legs LAST in a fixture
+//    session: the sync moves the fixture wildcards 7/3 -> 9/14.
 
 const { ApiClient } = require("../api");
 const { summarizeCollection } = require("../renderer/collectionLogic");
 const { parityReport, deckMath, summarizeDeckDetail } = require("../renderer/decksLogic");
 const { wildcardBill, billText, nextActionView } = require("../renderer/recommendationsLogic");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { createState, feedLine, buildPayload } = require("../watcherParse");
+const { LogWatcher } = require("../watcher");
 
 const RUN_AUTH = process.env.ARENA_SMOKE_AUTH === "1";
 const RUN_UPLOAD = process.env.ARENA_SMOKE_UPLOAD === "1";
@@ -41,6 +54,7 @@ const RUN_BASELINE = process.env.ARENA_SMOKE_BASELINE === "1";
 const RUN_DECKS_FIXTURE = process.env.ARENA_SMOKE_DECKS_FIXTURE === "1";
 const RUN_NEW_DECK = process.env.ARENA_SMOKE_NEW_DECK === "1";
 const RUN_JUND = process.env.ARENA_SMOKE_JUND === "1";
+const RUN_WATCHER = process.env.ARENA_SMOKE_WATCHER === "1";
 
 // The Phase 0 live gate's deck list (Oct 26, 2026): production's 14
 // decks, verified name-for-name. The parity leg asserts the engine
@@ -355,6 +369,144 @@ function rowsByName(list) {
       check("next-action card is one of the deck's missing cards",
         missingNames.has(v.cardName), String(v.cardName));
     });
+  }
+
+
+  // --- Slice 5: Arena Watcher legs (LOCAL fixture api only) --------
+
+  if (RUN_WATCHER) {
+    const fixtureLogPath = path.join(__dirname, "fixtures", "Player.log");
+    const session2Path = path.join(__dirname, "fixtures", "Player-session2.log");
+    const readLines = (p) => fs.readFileSync(p, "utf8").split("\n").filter((l) => l.length > 0);
+    const parseFile = (p) => {
+      const state = createState();
+      for (const line of readLines(p)) feedLine(state, line);
+      return state;
+    };
+    const waitFor = async (fn, ms = 6000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        if (fn()) return true;
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      return fn();
+    };
+    const copies = (d) => d.cards.reduce((a, c) => a + c.quantity, 0);
+
+    await leg("watcher parse: fixture log yields the real decks + inventory", async () => {
+      const state = parseFile(fixtureLogPath);
+      const payload = buildPayload(state);
+      const byName = {};
+      for (const d of payload.decks) byName[d.name] = d;
+      check("payload holds exactly the 2 real library decks (precon placeholder skipped)",
+        payload.decks.length === 2 && Boolean(byName["Killsquad"]) && Boolean(byName["Jeskai Artifacts (4)"]),
+        payload.decks.map((d) => d.name).join(", "));
+      check("Killsquad: 12 rows / 60 copies (real log values)",
+        byName["Killsquad"].cards.length === 12 && copies(byName["Killsquad"]) === 60,
+        JSON.stringify({ rows: byName["Killsquad"].cards.length, copies: copies(byName["Killsquad"]) }));
+      check("Jeskai Artifacts (4): 20 rows / 61 copies (dump + EventSetDeckV3 merged)",
+        byName["Jeskai Artifacts (4)"].cards.length === 20 && copies(byName["Jeskai Artifacts (4)"]) === 61,
+        JSON.stringify({ rows: byName["Jeskai Artifacts (4)"].cards.length, copies: copies(byName["Jeskai Artifacts (4)"]) }));
+      check("inventory from the real snapshot: gold 3675, gems 3020, vault 419, WC 194/189/9/14",
+        payload.inventory.gold === 3675 && payload.inventory.gems === 3020 &&
+        payload.inventory.vault_progress === 419 &&
+        payload.inventory.wildcards.common === 194 && payload.inventory.wildcards.uncommon === 189 &&
+        payload.inventory.wildcards.rare === 9 && payload.inventory.wildcards.mythic === 14,
+        JSON.stringify(payload.inventory));
+      check("robustness counters: 1 malformed line counted, 2 course sightings counted",
+        state.stats.malformed === 1 && state.stats.coursesSeen === 2,
+        JSON.stringify(state.stats));
+    });
+
+    await leg("watcher parse: adversarial lines never throw", async () => {
+      const state = createState();
+      let threw = false;
+      try {
+        feedLine(state, "{not json at all");
+        feedLine(state, "");
+        feedLine(state, '{"InventoryInfo":{"SeqId":2,"Changes":[]');
+        feedLine(state, "x".repeat(3 * 1024 * 1024));
+        feedLine(state, "[UnityCrossThreadLogger]==> EventSetDeckV3 {bad");
+      } catch { threw = true; }
+      check("malformed/partial/huge lines are absorbed, never thrown", !threw);
+      check("the 2 sentinel-bearing bad lines are counted malformed",
+        state.stats.malformed === 2, JSON.stringify(state.stats));
+    });
+
+    await leg("watcher tail: live append, split line, rotation reset", async () => {
+      const tmpLog = path.join(os.tmpdir(), "arena-watcher-smoke-" + process.pid + ".log");
+      fs.copyFileSync(fixtureLogPath, tmpLog);
+      const watcher = new LogWatcher({ logPath: tmpLog, pollMs: 100 });
+      watcher.start();
+      try {
+        check("tail catches up with the existing log",
+          await waitFor(() => Object.keys(watcher.getState().decks).length >= 2),
+          JSON.stringify(watcher.getStatus()));
+        const s2dump = JSON.parse(readLines(session2Path).find((l) => l.includes('"DeckSummaries"')));
+        fs.appendFileSync(tmpLog, JSON.stringify({ InventoryInfo: s2dump.InventoryInfo }) + "\n");
+        check("appended inventory lands (gold 3675 -> 3925, the real session-2 value)",
+          await waitFor(() => watcher.getState().inventory && watcher.getState().inventory.gold === 3925));
+        const coursesLine = readLines(fixtureLogPath).find((l) => l.startsWith('{"Courses"'));
+        const seenBefore = watcher.getState().stats.coursesSeen;
+        const cut = Math.floor(coursesLine.length / 2);
+        fs.appendFileSync(tmpLog, coursesLine.slice(0, cut));
+        await new Promise((r) => setTimeout(r, 450));
+        check("a split line is NOT parsed before its newline",
+          watcher.getState().stats.coursesSeen === seenBefore,
+          "coursesSeen=" + watcher.getState().stats.coursesSeen);
+        fs.appendFileSync(tmpLog, coursesLine.slice(cut) + "\n");
+        check("the completed line parses",
+          await waitFor(() => watcher.getState().stats.coursesSeen === seenBefore + 1));
+        fs.writeFileSync(tmpLog, fs.readFileSync(session2Path, "utf8"));
+        check("rotation/truncation resets state to the new session",
+          await waitFor(() => watcher.getStatus().rotations >= 1 &&
+            Object.keys(watcher.getState().decks).length === 1),
+          JSON.stringify(watcher.getStatus()));
+        const p2 = buildPayload(watcher.getState());
+        check("post-rotation payload is the session-2 deck only (Mono-Blue Elementals, 13 rows / 56 copies)",
+          p2.decks.length === 1 && p2.decks[0].name === "Mono-Blue Elementals" &&
+          p2.decks[0].cards.length === 13 && copies(p2.decks[0]) === 56,
+          JSON.stringify(p2.decks.map((d) => d.name)));
+      } finally {
+        watcher.stop();
+        fs.rmSync(tmpLog, { force: true });
+      }
+    });
+
+    await leg("watcher sync round-trip lands in the API (fixture stack)", async () => {
+      const payload = buildPayload(parseFile(fixtureLogPath));
+      const summary = await api.syncWatcher(payload);
+      check("sync summary: 2 decks, 32 rows, 31 matched, 1 unmatched (grp 75587 unregistered on purpose)",
+        summary.decks_stored === 2 && summary.card_rows === 32 &&
+        summary.cards_matched === 31 && summary.cards_unmatched === 1 &&
+        summary.wildcards_updated === true,
+        JSON.stringify(summary));
+      const decks = await api.watcherDecks();
+      const byName = {};
+      for (const d of decks) byName[d.name] = d;
+      check("read-back holds both decks",
+        decks.length === 2 && Boolean(byName["Killsquad"]) && Boolean(byName["Jeskai Artifacts (4)"]),
+        decks.map((d) => d.name).join(", "));
+      check("Killsquad read-back: 12 cards, all resolved to fixture names",
+        byName["Killsquad"].cards.length === 12 &&
+        byName["Killsquad"].cards.every((c) => c.name === "Watcher Fixture Card " + c.grp_id),
+        JSON.stringify(byName["Killsquad"].cards.slice(0, 3)));
+      const unreg = byName["Jeskai Artifacts (4)"].cards.find((c) => c.grp_id === 75587);
+      check("the unregistered grpId is stored raw with a null name, not dropped",
+        Boolean(unreg) && unreg.name === null && unreg.quantity >= 1,
+        JSON.stringify(unreg));
+      const stats = await api.collectionStats();
+      check("wildcard inventory moved to the log's values (rare 9, mythic 14)",
+        stats.wildcards.rare === 9 && stats.wildcards.mythic === 14,
+        JSON.stringify(stats.wildcards));
+      const again = await api.syncWatcher(payload);
+      const decks2 = await api.watcherDecks();
+      check("re-sync replaces, never duplicates (still 2 decks, same counts)",
+        again.decks_stored === 2 && again.cards_matched === 31 && decks2.length === 2,
+        JSON.stringify(again));
+    });
+  } else {
+    console.log("SKIP - watcher legs (set ARENA_SMOKE_WATCHER=1 against a LOCAL fixture api)");
   }
 
   console.log("RESULT:", failures === 0 ? "ALL PASS" : failures + " FAILURES");

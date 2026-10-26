@@ -145,13 +145,15 @@ async def seed_scryfall_cards():
                 scryfall_id=rc.get("id"),
                 set_code=rc.get("set", "unknown"),
                 collector_number=rc.get("collector_number", "0"),
-                rarity=rc.get("rarity", "common")
+                rarity=rc.get("rarity", "common"),
+                arena_id=rc.get("arena_id")
             ).on_conflict_do_update(
                 index_elements=['scryfall_id'],
                 set_={
                     "set_code": rc.get("set", "unknown"),
                     "collector_number": rc.get("collector_number", "0"),
-                    "rarity": rc.get("rarity", "common")
+                    "rarity": rc.get("rarity", "common"),
+                    "arena_id": rc.get("arena_id")
                 }
             )
             await session.execute(print_stmt)

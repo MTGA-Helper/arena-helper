@@ -125,6 +125,47 @@ priced RARE (their cheapest printings — both have mythic prints),
 Seize the Spoils priced COMMON, Bitter Triumph UNCOMMON, and the
 three basic lands missing 0.
 
+### Local watcher fixture (for the Slice 5 legs)
+
+`test/watcher_fixture.py` extends the collection fixture (run it
+after `test/collection_fixture.py`) with the grpId corpus the watcher
+sync resolves against: one print per grpId in `test/fixtures/Player.log`
+— a fixture log built from REAL Player.log lines (real decks, real
+grpIds, real inventory values) — with grpId 75587 deliberately left
+unregistered so the legs can watch an unresolved row land stored-raw:
+
+```sh
+SYNC_DATABASE_URL=postgresql://arena@/arena_fixture?host=/tmp&port=54329 \
+      python3 apps/desktop/test/watcher_fixture.py
+ARENA_API_BASE=http://127.0.0.1:8124 ARENA_SMOKE_DECKS=0 \
+  ARENA_SMOKE_AUTH=1 ARENA_SMOKE_UPLOAD=1 ARENA_SMOKE_WATCHER=1 \
+      npm run smoke
+```
+
+(The fixture api needs `DATABASE_URL`, `SYNC_DATABASE_URL` and
+`SECRET_KEY` in its environment — auth reads the sync URL, and the
+next-action bridge self-calls on `PORT`.) The legs prove the parse
+(real decks + inventory, malformed lines absorbed), the live tail
+(append, split line held until its newline, rotation reset), and
+the sync round-trip: 2 decks / 32 rows, 31 matched / 1 unmatched,
+wildcards moved to the log's 9 rare / 14 mythic. Note the watcher
+syncs the deck library + inventory only — the current client never
+writes the owned-card collection to the log (verified by a full
+scan of two real logs), so the collection stays on the CSV upload.
+
+## Status (Oct 26, 2026 — TURBO surge Day 2, Slice 5)
+
+- Slice 5 verified on the Mac: the Arena Watcher tails Player.log
+  and syncs the deck library + wildcard/currency state to the new
+  `/watcher` endpoints; grpIds resolve through the seeded
+  `CardPrint.arena_id`. Fixture legs (real-log fixtures) all pass,
+  the full real 5.5 MB log parses in ~40 ms bounded, Slice 1–4
+  regression legs and the live production smoke (incl. the 12,960
+  baseline gate) all still pass.
+- Not yet verified: the GUI window (no display session over SSH)
+  and Windows — the watcher's Windows log path and tail behavior
+  are Slice 6 gate items, like the rest of the Windows lane.
+
 ## Status (Oct 26, 2026 — TURBO surge Day 2, Slice 4)
 
 - Slice 4 verified on the Mac: the engine's wildcard math now

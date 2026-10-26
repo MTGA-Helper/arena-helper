@@ -85,6 +85,10 @@ class CardPrint(Base):
     set_code = Column(String, index=True)
     collector_number = Column(String)
     rarity = Column(String, index=True)
+    # Arena's own card id (grpId in Player.log payloads). Scryfall
+    # records have always carried it; Slice 5 started storing it so
+    # the Arena Watcher can resolve grpIds to engine cards.
+    arena_id = Column(Integer, nullable=True, index=True)
 
     card = relationship("Card", back_populates="printings")
 
@@ -176,3 +180,38 @@ class MatchHistory(Base):
     result = Column(String, nullable=False) # Win / Loss
     format = Column(String, index=True, nullable=True)
     timestamp = Column(DateTime, nullable=True)
+
+
+class UserDeck(Base):
+    """A deck from the player's Arena library, synced by the desktop
+    Arena Watcher (Slice 5). Kept apart from Deck — those are the
+    engine's meta decks; these belong to a user and carry the Arena
+    deck id the client knows them by."""
+    __tablename__ = "user_decks"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    arena_deck_id = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    format = Column(String, nullable=True)
+
+    cards = relationship("UserDeckCard", back_populates="deck", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "arena_deck_id", name="uq_user_arena_deck"),
+    )
+
+class UserDeckCard(Base):
+    """One card row of a UserDeck. grp_id is stored raw — it is what
+    the log carries — and card_id resolves it through
+    CardPrint.arena_id when the corpus knows the print; it stays NULL
+    for grpIds the seed has not seen, never guessed."""
+    __tablename__ = "user_deck_cards"
+    id = Column(Integer, primary_key=True, index=True)
+    deck_id = Column(Integer, ForeignKey("user_decks.id"), nullable=False)
+    grp_id = Column(Integer, nullable=False)
+    card_id = Column(Integer, ForeignKey("cards.id"), nullable=True)
+    quantity = Column(Integer, default=1)
+    board = Column(String, nullable=False, default="main")  # main | sideboard | command | companion
+
+    deck = relationship("UserDeck", back_populates="cards")
+    card = relationship("Card")
