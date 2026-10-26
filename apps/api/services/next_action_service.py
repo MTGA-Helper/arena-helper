@@ -61,7 +61,13 @@ async def fetch_live_candidates():
                             candidates.append({
                                 "deck_name": deck_name,
                                 "card_name": c_name,
-                                "rarity": rarity if rarity in ["rare", "mythic", "uncommon"] else "rare",
+                                # Slice 4 (Oct 26, 2026): common candidates
+                            # pass through as common now that the deck
+                            # tally prices all four rarities — the old
+                            # whitelist silently re-labeled every
+                            # common as a rare.
+                            # "rarity": rarity if rarity in ["rare", "mythic", "uncommon"] else "rare",
+                            "rarity": rarity if rarity in ["rare", "mythic", "uncommon", "common"] else "rare",
                                 "deficit": deficit,
                                 "base_completion_gain": base_gain
                             })

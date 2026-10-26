@@ -21,8 +21,10 @@ Fixture design (every smoke expectation derives from this by hand):
 - Deck A "Fixture Dino Tribal" (id 3001; winrate 55.0, meta_share 5.0):
   Dino x4, Elf x4, Bolt x2, Land x4 = 14 required. The fixture user
   owns Dino x2, Elf x4, Land x4 (no Bolt) = 10 owned, 71.4% complete.
-  Missing: Dino x2 (rare -> 2 rare wildcards), Bolt x2. WC {rare 2,
-  mythic 0}.
+  Missing: Dino x2 (rare -> 2 rare wildcards), Bolt x2 (uncommon ->
+  2 uncommon wildcards). WC {common 0, uncommon 2, rare 2, mythic 0}
+  — all four buckets since Slice 4; the pre-Slice-4 tally dropped
+  the uncommon pair from the bill entirely.
 - Deck B "Fixture Wurm Ramp" (id 3002, phase 2; winrate 52.0,
   meta_share 4.0): Wurm x3, Elf x4, Land x4 = 11 required; owns 8,
   72.7% complete; missing Wurm x3 -> WC {rare 0, mythic 3}.

@@ -13,6 +13,9 @@
 // Slice 3 (TURBO surge, Oct 26, 2026): deck detail — one deck's
 // full card list + its stored engine analysis.
 //
+// Slice 4 (TURBO surge, Oct 26, 2026): next-action — the engine's
+// computed recommendation for the signed-in collection.
+//
 // Base URL override: ARENA_API_BASE (used by the smoke test to point at
 // a locally booted API). Default is the production engine.
 
@@ -67,6 +70,7 @@ class ApiClient {
   health() { return this.request("GET", "/api/health"); }
   decks() { return this.request("GET", "/recommendations/decks"); }
   deckDetail(deckId) { return this.request("GET", "/recommendations/decks/" + deckId); }
+  nextAction() { return this.request("GET", "/recommendations/next-action"); }
   register(email, pw) { return this.request("POST", "/auth/register", { email, password: pw }); }
 
   async login(email, pw) {

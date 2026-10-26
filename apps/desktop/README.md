@@ -1,4 +1,4 @@
-# Arena Helper — Desktop (Slices 1–3)
+# Arena Helper — Desktop (Slices 1–4)
 
 Native desktop shell for Arena Helper: Electron (Windows / macOS / Linux),
 a thin client over the live engine API. Slice 1 is the shell, the engine
@@ -8,7 +8,12 @@ upload/refresh. Slice 3 adds the Decks view: the engine's ranked deck
 list with its completion math checked in the open, and a per-deck
 detail — full card list with type lines and subtypes, per-card
 owned/missing, and the stored engine analysis shown exactly as
-served. Recommendations deepen in Slice 4.
+served. Slice 4 adds the Recommendations section (the engine's
+next-action answer, with its canned fallback labeled as a
+fallback) and deck choosing: every deck's wildcard bill in all
+four rarities, priced at each card's cheapest printing with
+basics free — the math Matt's Jund Dino hand-check pins at
+41 wildcards = 10M / 25R / 5U / 1C.
 
 ## Layout
 
@@ -24,6 +29,8 @@ served. Recommendations deepen in Slice 4.
   filter, shared by the renderer and the smoke test.
 - `renderer/decksLogic.js` — pure deck parity / completion-math /
   detail-summary logic, shared by the renderer and the smoke test.
+- `renderer/recommendationsLogic.js` — pure wildcard-bill +
+  next-action-view logic (Slice 4), shared the same way.
 
 ## Run
 
@@ -48,6 +55,8 @@ ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_DECKS_FIXTURE=1 npm run smoke
                                                 # Slice 3 deck/detail/analysis hand-checks — LOCAL fixture api only (see below)
 ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_DECKS_FIXTURE=1 ARENA_SMOKE_NEW_DECK=1 npm run smoke
                                                 # + the newly-seeded-deck leg, after decks_fixture.py --phase2
+ARENA_API_BASE=http://127.0.0.1:8124 ARENA_SMOKE_JUND=1 npm run smoke
+                                                # Slice 4 Jund Dino acceptance leg — LOCAL Jund api only (see below)
 ```
 
 ### Local collection fixture (for the upload leg)
@@ -93,6 +102,45 @@ python3 apps/desktop/test/decks_fixture.py --phase2 # adds Deck B + re-analyzes
 Fixture expectations are printed by the seed script and asserted by the
 smoke test: Deck A completes 71.4% with a 45.25 final analysis score —
 the value the engine's own metric definitions produce by hand.
+
+### Local Jund Dino fixture (for the Slice 4 acceptance leg)
+
+`test/jund_fixture.py` seeds a SCRATCH CLONE of the full card corpus
+(never the seed database itself) with Matt's "Jund Dino Madness"
+Deck Lab submission as an engine deck plus Billy's collection at
+the Oct 19, 2026 hand-recorded ownership:
+
+```sh
+createdb -h /tmp -p 54329 -U arena arena_slice4 -T arena_seed   # clone the corpus
+SYNC_DATABASE_URL=<redacted>
+      python3 apps/desktop/test/jund_fixture.py
+DATABASE_URL=<redacted> PYTHONPATH=. uvicorn apps.api.main:app --port 8124   # PORT=8124 matters: next-action calls its own port
+```
+
+The leg asserts the deck-choosing acceptance numbers end to end
+through the app client: 71 required / 30 owned / 42.3% complete,
+and a wildcard bill of exactly **41 = 10 mythic / 25 rare /
+5 uncommon / 1 common**, with Fabled Passage and Cavern of Souls
+priced RARE (their cheapest printings — both have mythic prints),
+Seize the Spoils priced COMMON, Bitter Triumph UNCOMMON, and the
+three basic lands missing 0.
+
+## Status (Oct 26, 2026 — TURBO surge Day 2, Slice 4)
+
+- Slice 4 verified on the Mac: the engine's wildcard math now
+  prices deficits at each card's cheapest printing and tallies
+  all four rarities (basics free), `craft_priority` charges
+  copies-to-craft-once (KB gap #12), and the app surfaces the
+  next-action recommendation + the deck-choosing bill. Unit
+  checks 15/15 (`apps/api/test_slice4_wildcard_math.py`) and the
+  Jund acceptance leg passes end to end against a scratch clone
+  of the real corpus (41 = 10M/25R/5U/1C exactly). Slice 1–3
+  regression legs and the live production smoke (incl. the
+  12,960 baseline gate) all still pass.
+- Production and the dev service still serve the pre-Slice-4
+  bill (rare/mythic keys only, highest-print pricing) until the
+  Phase 0 promotion PRs (#22/#23) merge; the app renders both
+  shapes correctly (missing buckets read as 0).
 
 ## Status (Oct 26, 2026 — TURBO surge Day 2)
 

@@ -23,16 +23,24 @@
 //    and must only be pointed at a LOCAL api instance seeded by
 //    test/collection_fixture.py — uploading REPLACES the collection.
 //    Never run the upload leg against production or the dev service.
+//  - the Slice 4 Jund Dino acceptance leg runs only when
+//    ARENA_SMOKE_JUND=1, pointed at a LOCAL api seeded by
+//    test/jund_fixture.py (a scratch clone of the full corpus):
+//    Matt's deck must cost exactly 41 wildcards = 10M/25R/5U/1C
+//    through the app's own client + recommendationsLogic, and the
+//    next-action answer must be a real Jund candidate.
 
 const { ApiClient } = require("../api");
 const { summarizeCollection } = require("../renderer/collectionLogic");
 const { parityReport, deckMath, summarizeDeckDetail } = require("../renderer/decksLogic");
+const { wildcardBill, billText, nextActionView } = require("../renderer/recommendationsLogic");
 
 const RUN_AUTH = process.env.ARENA_SMOKE_AUTH === "1";
 const RUN_UPLOAD = process.env.ARENA_SMOKE_UPLOAD === "1";
 const RUN_BASELINE = process.env.ARENA_SMOKE_BASELINE === "1";
 const RUN_DECKS_FIXTURE = process.env.ARENA_SMOKE_DECKS_FIXTURE === "1";
 const RUN_NEW_DECK = process.env.ARENA_SMOKE_NEW_DECK === "1";
+const RUN_JUND = process.env.ARENA_SMOKE_JUND === "1";
 
 // The Phase 0 live gate's deck list (Oct 26, 2026): production's 14
 // decks, verified name-for-name. The parity leg asserts the engine
@@ -98,6 +106,8 @@ function rowsByName(list) {
 
   if (process.env.ARENA_SMOKE_DECKS === "0") {
     console.log("SKIP - decks (ARENA_SMOKE_DECKS=0; local fixture has no card corpus)");
+  } else if (RUN_JUND) {
+    console.log("SKIP - live decks parity (Jund mode asserts its own deck)");
   } else if (RUN_DECKS_FIXTURE) {
     console.log("SKIP - live decks parity (fixture mode asserts its own deck list)");
   } else {
@@ -228,10 +238,16 @@ function rowsByName(list) {
       const a = decks.find((d) => d.deck_name === "Fixture Dino Tribal");
       check("fixture list holds Deck A with its id", Boolean(a && a.deck_id === 3001),
         JSON.stringify(a && { deck_id: a.deck_id, deck_name: a.deck_name }));
+      // Slice 4: the bill now tallies ALL FOUR rarities — Bolt's
+      // 2 uncommon are counted (the pre-Slice-4 shape dropped them
+      // silently) — and missing_cards carry craft rarities.
       check("fixture Deck A list math", Boolean(a) &&
         a.cards_required === 14 && a.cards_owned === 10 &&
         a.completion_percent === 71.4 &&
         a.wildcard_cost.rare === 2 && a.wildcard_cost.mythic === 0 &&
+        a.wildcard_cost.uncommon === 2 && a.wildcard_cost.common === 0 &&
+        wildcardBill(a.wildcard_cost).total === 4 &&
+        billText(a.wildcard_cost) === "4 wildcards — 2 rare · 2 uncommon" &&
         deckMath(a).agrees,
         JSON.stringify(a));
 
@@ -275,6 +291,7 @@ function rowsByName(list) {
           b.cards_required === 11 && b.cards_owned === 8 &&
           b.completion_percent === 72.7 &&
           b.wildcard_cost.rare === 0 && b.wildcard_cost.mythic === 3 &&
+          b.wildcard_cost.uncommon === 0 && b.wildcard_cost.common === 0 &&
           deckMath(b).agrees,
           JSON.stringify(b));
         const detail = await api.deckDetail(3002);
@@ -285,6 +302,59 @@ function rowsByName(list) {
     } else {
       console.log("SKIP - new-deck leg (set ARENA_SMOKE_NEW_DECK=1 after decks_fixture.py --phase2)");
     }
+  }
+
+  // --- Slice 4: Jund Dino acceptance leg (LOCAL Jund api only) ----
+
+  if (RUN_JUND) {
+    await leg("JUND ACCEPTANCE: 41 wildcards = 10M/25R/5U/1C via the app client", async () => {
+      const decks = await api.decks();
+      const jund = decks.find((d) => d.deck_name === "Jund Dino Madness");
+      check("jund deck served by the recommendations list", Boolean(jund),
+        "decks=" + decks.map((d) => d.deck_name).join(", "));
+      const bill = wildcardBill(jund && jund.wildcard_cost);
+      check("jund bill is exactly 41 = 10M/25R/5U/1C",
+        bill.mythic === 10 && bill.rare === 25 && bill.uncommon === 5 &&
+        bill.common === 1 && bill.total === 41,
+        JSON.stringify(bill));
+      check("jund bill text is the spec's sentence",
+        billText(jund && jund.wildcard_cost) ===
+          "41 wildcards — 10 mythic · 25 rare · 5 uncommon · 1 common",
+        billText(jund && jund.wildcard_cost));
+      check("jund totals: 71 required / 30 owned / 42.3% / math ties out",
+        Boolean(jund) && jund.cards_required === 71 && jund.cards_owned === 30 &&
+        jund.completion_percent === 42.3 && deckMath(jund).agrees,
+        JSON.stringify(jund && { r: jund.cards_required, o: jund.cards_owned, p: jund.completion_percent }));
+
+      const detail = await api.deckDetail(jund.deck_id);
+      const byName = {};
+      for (const c of detail.cards) byName[c.name] = c;
+      check("jund detail craft rarities (cheapest print)",
+        byName["Fabled Passage"].craft_rarity === "rare" &&
+        byName["Cavern of Souls"].craft_rarity === "rare" &&
+        byName["Seize the Spoils"].craft_rarity === "common" &&
+        byName["Bitter Triumph"].craft_rarity === "uncommon" &&
+        byName["Gishath, Sun's Avatar"].craft_rarity === "mythic",
+        JSON.stringify(["Fabled Passage", "Cavern of Souls", "Seize the Spoils", "Bitter Triumph"]
+          .map((n) => n + "=" + (byName[n] || {}).craft_rarity)));
+      check("jund detail basics are free (missing 0, basic flag)",
+        ["Mountain", "Forest", "Swamp"].every((n) =>
+          byName[n] && byName[n].missing === 0 && byName[n].basic === true),
+        JSON.stringify(["Mountain", "Forest", "Swamp"].map((n) => byName[n])));
+    });
+
+    await leg("next-action serves a real Jund candidate", async () => {
+      const na = await api.nextAction();
+      const v = nextActionView(na);
+      check("next-action available and NOT the fallback",
+        v.available && !v.isFallback && v.deckName === "Jund Dino Madness",
+        JSON.stringify(v));
+      const decks = await api.decks();
+      const jund = decks.find((d) => d.deck_name === "Jund Dino Madness");
+      const missingNames = new Set((jund.missing_cards || []).map((m) => m.name));
+      check("next-action card is one of the deck's missing cards",
+        missingNames.has(v.cardName), String(v.cardName));
+    });
   }
 
   console.log("RESULT:", failures === 0 ? "ALL PASS" : failures + " FAILURES");

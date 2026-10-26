@@ -7,6 +7,9 @@
 // Slice 3 (Oct 26, 2026): "deck-detail" fetches one deck's full
 // card list + stored analysis for the decks view.
 //
+// Slice 4 (Oct 26, 2026): "next-action" fetches the engine's
+// recommendation for the Recommendations section.
+//
 // Slice 2 (Oct 26, 2026): collection actions. "collection" returns the
 // list + stats in one round trip. "collection-upload" opens the CSV file
 // picker HERE in the main process — the renderer never touches the
@@ -52,6 +55,8 @@ ipcMain.handle("arena:action", async (_evt, action, payload = {}) => {
         return { ok: true, data: await api.decks() };
       case "deck-detail":
         return { ok: true, data: await api.deckDetail(payload.deckId) };
+      case "next-action":
+        return { ok: true, data: await api.nextAction() };
       case "register":
         return { ok: true, data: await api.register(payload.email, payload.pw) };
       case "login": {

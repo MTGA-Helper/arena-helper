@@ -89,6 +89,16 @@
     <p class="error" id="collection-error"></p>
   </section>
 
+  <section id="recommendations-view" class="hidden wide">
+    <h2>Recommendations</h2>
+    <p class="note">The engine's next action for your collection — and, in any deck below, the full wildcard bill for choosing it.</p>
+    <p id="next-action-line">Loading the engine's next action…</p>
+    <ul id="next-action-reasons"></ul>
+    <p id="next-action-note" class="note"></p>
+    <button type="button" id="next-action-refresh-btn">Refresh recommendation</button>
+    <p class="error" id="recommendations-error"></p>
+  </section>
+
   <section id="decks-view" class="hidden wide">
     <h2>Decks</h2>
     <p id="decks-summary-line" class="note">Loading decks…</p>
@@ -105,6 +115,7 @@
 
 <script src="collectionLogic.js"></script>
 <script src="decksLogic.js"></script>
+<script src="recommendationsLogic.js"></script>
 <script src="renderer.js"></script>
 </body>
 </html>

@@ -3,6 +3,12 @@
 // All calls go through the preload bridge; this file holds no URLs and no
 // token.
 //
+// Slice 4: the Recommendations section — the engine's next-action
+// answer rendered through recommendationsLogic (with the canned
+// fallback labeled as a fallback, never dressed up as advice), and
+// deck choosing in the deck detail: the full four-rarity wildcard
+// bill and a per-card Craft column priced at the cheapest printing.
+//
 // Slice 3: the Decks section — the engine's ranked deck list with
 // its completion math checked in the open (decksLogic.deckMath),
 // and a per-deck detail: full card list with type lines/subtypes,
@@ -43,6 +49,7 @@ async function showHome() {
   $("home-view").classList.remove("hidden");
   $("collection-view").classList.remove("hidden");
   $("decks-view").classList.remove("hidden");
+  $("recommendations-view").classList.remove("hidden");
   $("welcome").textContent = "Signed in as " + session.data.email;
   const res = await window.arena.action("decks");
   if (res.ok) {
@@ -57,6 +64,7 @@ async function showHome() {
   }
   loadCollection();
   loadDecks();
+  loadNextAction();
 }
 
 // --- Collection (Slice 2) ---------------------------------------------
@@ -164,17 +172,21 @@ function renderDecks() {
     " Click a deck for its cards and analysis.";
   const table = document.createElement("table");
   const head = document.createElement("tr");
-  for (const label of ["Deck", "Archetype", "Format", "Tier", "Complete", "Owned", "Wildcards R/M", "Score"]) {
+  for (const label of ["Deck", "Archetype", "Format", "Tier", "Complete", "Owned", "Wildcards", "Score"]) {
     const th = document.createElement("th");
     th.textContent = label;
-    if (["Tier", "Complete", "Owned", "Wildcards R/M", "Score"].includes(label)) th.className = "num";
+    if (["Tier", "Complete", "Owned", "Wildcards", "Score"].includes(label)) th.className = "num";
     head.appendChild(th);
   }
   table.appendChild(head);
   for (const d of decksList) {
     const tr = document.createElement("tr");
     tr.className = "deck-row";
-    const wc = d.wildcard_cost || {};
+    // Slice 4: the Wildcards column is the full four-rarity bill's
+    // total (recommendationsLogic), with the itemized bill as the
+    // cell's title — the pre-Slice-4 cell showed only rare/mythic,
+    // which understated every deck with uncommon/common gaps.
+    const bill = window.recommendationsLogic.wildcardBill(d.wildcard_cost);
     const cells = [
       d.deck_name,
       d.archetype || "—",
@@ -182,13 +194,14 @@ function renderDecks() {
       d.tier == null ? "—" : String(d.tier),
       d.completion_percent + "%",
       (d.cards_owned || 0) + " / " + (d.cards_required || 0),
-      (wc.rare || 0) + " / " + (wc.mythic || 0),
+      String(bill.total),
       d.rank_score == null ? "—" : d.rank_score.toFixed(1),
     ];
     cells.forEach((text, i) => {
       const td = document.createElement("td");
       td.textContent = text;
       if (i >= 3) td.className = "num";
+      if (i === 6) td.title = window.recommendationsLogic.billText(d.wildcard_cost);
       tr.appendChild(td);
     });
     if (d.deck_id != null) {
@@ -217,13 +230,12 @@ function renderDeckDetail(detail) {
   const s = window.decksLogic.summarizeDeckDetail(detail);
   $("deck-detail").classList.remove("hidden");
   $("deck-detail-title").textContent = detail.deck_name;
-  const wc = detail.wildcard_cost || {};
   $("deck-detail-meta").textContent =
     (detail.archetype || "—") + " · " + (detail.format || "—") +
     " · Tier " + (detail.tier == null ? "—" : detail.tier) +
     " · Winrate " + detail.winrate + "%" +
     " · " + detail.completion_percent + "% complete (" + detail.cards_owned + " / " + detail.cards_required + ")" +
-    " · Wildcards to finish: " + (wc.rare || 0) + " rare / " + (wc.mythic || 0) + " mythic" +
+    " · Wildcards to finish: " + window.recommendationsLogic.billText(detail.wildcard_cost) +
     " · " + s.totalCards + " cards, " + s.cardKinds + " distinct, " + s.missingKinds + " short";
 
   const analysisEl = $("deck-analysis");
@@ -262,7 +274,7 @@ function renderDeckDetail(detail) {
   wrap.textContent = "";
   const table = document.createElement("table");
   const head = document.createElement("tr");
-  for (const label of ["Qty", "Card", "Type", "Rarity", "Own", "Missing"]) {
+  for (const label of ["Qty", "Card", "Type", "Rarity", "Craft", "Own", "Missing"]) {
     const th = document.createElement("th");
     th.textContent = label;
     if (["Qty", "Own", "Missing"].includes(label)) th.className = "num";
@@ -276,14 +288,18 @@ function renderDeckDetail(detail) {
       c.name,
       c.type_line || (c.types || []).join(" "),
       c.rarity,
+      // Slice 4: the Craft column prices the missing copies at the
+      // cheapest printing (the engine's craft_rarity); basics are
+      // free on Arena and say so.
+      c.basic ? "free" : (c.craft_rarity || c.rarity),
       String(c.owned || 0),
       String(c.missing || 0),
     ];
     values.forEach((text, i) => {
       const td = document.createElement("td");
       td.textContent = text;
-      if ([0, 4, 5].includes(i)) td.className = "num";
-      if (i === 5 && (c.missing || 0) > 0) td.classList.add("missing");
+      if ([0, 5, 6].includes(i)) td.className = "num";
+      if (i === 6 && (c.missing || 0) > 0) td.classList.add("missing");
       tr.appendChild(td);
     });
     table.appendChild(tr);
@@ -302,6 +318,45 @@ async function loadDeckDetail(deckId) {
 }
 
 $("decks-refresh-btn").addEventListener("click", loadDecks);
+
+// --- Recommendations (Slice 4) ------------------------------------------
+
+function renderNextAction(payload) {
+  const v = window.recommendationsLogic.nextActionView(payload);
+  const line = $("next-action-line");
+  const reasons = $("next-action-reasons");
+  const note = $("next-action-note");
+  reasons.textContent = "";
+  if (!v.available) {
+    line.textContent = "The engine has no next action for this collection right now.";
+    note.textContent = "";
+    return;
+  }
+  line.textContent = "Craft " + v.cost + " × " + v.cardName +
+    " (" + v.rarity + ") — next step toward " + v.deckName + ".";
+  for (const r of v.reasons) {
+    const li = document.createElement("li");
+    li.textContent = r;
+    reasons.appendChild(li);
+  }
+  note.textContent = v.isFallback
+    ? "This is the engine's safety default, not a computed recommendation — it appears when the engine cannot see your decks' missing cards."
+    : "Computed by the engine from your collection and its ranked decks" +
+      (v.confidence ? " · engine confidence: " + v.confidence : "") + ".";
+}
+
+async function loadNextAction() {
+  $("recommendations-error").textContent = "";
+  const res = await window.arena.action("next-action");
+  if (res.ok) {
+    renderNextAction(res.data);
+  } else {
+    $("next-action-line").textContent = "Could not load the recommendation.";
+    $("recommendations-error").textContent = res.error;
+  }
+}
+
+$("next-action-refresh-btn").addEventListener("click", loadNextAction);
 
 // --- Auth (Slice 1) -----------------------------------------------------
 
@@ -336,6 +391,7 @@ $("logout-btn").addEventListener("click", async () => {
   $("home-view").classList.add("hidden");
   $("collection-view").classList.add("hidden");
   $("decks-view").classList.add("hidden");
+  $("recommendations-view").classList.add("hidden");
   $("auth-view").classList.remove("hidden");
 });
 
