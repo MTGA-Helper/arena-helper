@@ -29,6 +29,13 @@
   .row { display: flex; gap: 0.5rem; align-items: end; }
   .row input { flex: 1; }
   .note { color: #444; font-size: 0.85rem; }
+  #decks-table-wrap, #deck-cards-wrap { border: 1px solid #eee; border-radius: 6px; padding: 0.5rem 0.75rem; margin-top: 0.5rem; }
+  #decks-table-wrap table, #deck-cards-wrap table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  #decks-table-wrap td, #decks-table-wrap th, #deck-cards-wrap td, #deck-cards-wrap th { text-align: left; padding: 0.2rem 0.4rem; border-bottom: 1px solid #f0f0f0; }
+  #decks-table-wrap td.num, #decks-table-wrap th.num, #deck-cards-wrap td.num, #deck-cards-wrap th.num { text-align: right; }
+  tr.deck-row { cursor: pointer; }
+  tr.deck-row:hover { background: #f6f8fa; }
+  .missing { color: #b3261e; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -82,7 +89,22 @@
     <p class="error" id="collection-error"></p>
   </section>
 
+  <section id="decks-view" class="hidden wide">
+    <h2>Decks</h2>
+    <p id="decks-summary-line" class="note">Loading decks…</p>
+    <button type="button" id="decks-refresh-btn">Refresh decks</button>
+    <div id="decks-table-wrap"></div>
+    <div id="deck-detail" class="hidden">
+      <h3 id="deck-detail-title"></h3>
+      <p id="deck-detail-meta" class="note"></p>
+      <div id="deck-analysis"></div>
+      <div id="deck-cards-wrap"></div>
+    </div>
+    <p class="error" id="decks-error"></p>
+  </section>
+
 <script src="collectionLogic.js"></script>
+<script src="decksLogic.js"></script>
 <script src="renderer.js"></script>
 </body>
 </html>

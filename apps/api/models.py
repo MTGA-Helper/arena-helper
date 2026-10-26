@@ -31,6 +31,12 @@ class Card(Base):
     colors = Column(ARRAY(String), default=[])
     color_identity = Column(ARRAY(String), default=[])
     types = Column(ARRAY(String), default=[])
+    # Slice 3 (TURBO surge, Oct 26, 2026) — KB gap #7: the full
+    # Scryfall type line and the subtypes right of its em-dash.
+    # `types` alone (left of the dash) made tribal unrepresentable:
+    # Dinosaur / Elf / Cat Soldier never reached the database.
+    type_line = Column(String, nullable=True)
+    subtypes = Column(ARRAY(String), default=[])
     keywords = Column(ARRAY(String), default=[])
     released_at = Column(Date, nullable=True)
 

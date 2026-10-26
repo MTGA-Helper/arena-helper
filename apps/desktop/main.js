@@ -4,6 +4,9 @@
 // single IPC entry point. The renderer names an action, never a URL, and
 // never receives the session token (see api.js).
 //
+// Slice 3 (Oct 26, 2026): "deck-detail" fetches one deck's full
+// card list + stored analysis for the decks view.
+//
 // Slice 2 (Oct 26, 2026): collection actions. "collection" returns the
 // list + stats in one round trip. "collection-upload" opens the CSV file
 // picker HERE in the main process — the renderer never touches the
@@ -47,6 +50,8 @@ ipcMain.handle("arena:action", async (_evt, action, payload = {}) => {
         return { ok: true, data: await api.health() };
       case "decks":
         return { ok: true, data: await api.decks() };
+      case "deck-detail":
+        return { ok: true, data: await api.deckDetail(payload.deckId) };
       case "register":
         return { ok: true, data: await api.register(payload.email, payload.pw) };
       case "login": {

@@ -3,6 +3,11 @@
 // All calls go through the preload bridge; this file holds no URLs and no
 // token.
 //
+// Slice 3: the Decks section — the engine's ranked deck list with
+// its completion math checked in the open (decksLogic.deckMath),
+// and a per-deck detail: full card list with type lines/subtypes,
+// per-card owned/missing, and the stored engine analysis as served.
+//
 // Slice 2: the Collection section — engine stats, the list-vs-stats
 // reconciliation line (computed by collectionLogic.js, the same module
 // the smoke test exercises), a name filter, and CSV upload/refresh.
@@ -12,6 +17,7 @@ const LIST_CAP = 500; // render cap; the full list stays in memory for filtering
 
 let collectionList = [];
 let collectionStats = null;
+let decksList = [];
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
@@ -36,6 +42,7 @@ async function showHome() {
   $("auth-view").classList.add("hidden");
   $("home-view").classList.remove("hidden");
   $("collection-view").classList.remove("hidden");
+  $("decks-view").classList.remove("hidden");
   $("welcome").textContent = "Signed in as " + session.data.email;
   const res = await window.arena.action("decks");
   if (res.ok) {
@@ -49,6 +56,7 @@ async function showHome() {
     $("decks-summary").textContent = "Could not load decks: " + res.error;
   }
   loadCollection();
+  loadDecks();
 }
 
 // --- Collection (Slice 2) ---------------------------------------------
@@ -142,6 +150,159 @@ $("collection-upload-btn").addEventListener("click", async () => {
   renderCollection();
 });
 
+// --- Decks (Slice 3) ----------------------------------------------------
+
+function renderDecks() {
+  const wrap = $("decks-table-wrap");
+  wrap.textContent = "";
+  const badMath = decksList.filter((d) => !window.decksLogic.deckMath(d).agrees);
+  $("decks-summary-line").textContent =
+    decksList.length + " decks from the engine, in the engine's rank order." +
+    (badMath.length
+      ? " Warning: " + badMath.length + " deck(s) have completion numbers that do not tie out."
+      : " Every deck's owned + missing ties out to its card total.") +
+    " Click a deck for its cards and analysis.";
+  const table = document.createElement("table");
+  const head = document.createElement("tr");
+  for (const label of ["Deck", "Archetype", "Format", "Tier", "Complete", "Owned", "Wildcards R/M", "Score"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    if (["Tier", "Complete", "Owned", "Wildcards R/M", "Score"].includes(label)) th.className = "num";
+    head.appendChild(th);
+  }
+  table.appendChild(head);
+  for (const d of decksList) {
+    const tr = document.createElement("tr");
+    tr.className = "deck-row";
+    const wc = d.wildcard_cost || {};
+    const cells = [
+      d.deck_name,
+      d.archetype || "—",
+      d.format || "—",
+      d.tier == null ? "—" : String(d.tier),
+      d.completion_percent + "%",
+      (d.cards_owned || 0) + " / " + (d.cards_required || 0),
+      (wc.rare || 0) + " / " + (wc.mythic || 0),
+      d.rank_score == null ? "—" : d.rank_score.toFixed(1),
+    ];
+    cells.forEach((text, i) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      if (i >= 3) td.className = "num";
+      tr.appendChild(td);
+    });
+    if (d.deck_id != null) {
+      tr.addEventListener("click", () => loadDeckDetail(d.deck_id));
+    } else {
+      tr.title = "Deck detail needs the Slice 3 engine (this engine does not return deck ids yet).";
+    }
+    table.appendChild(tr);
+  }
+  wrap.appendChild(table);
+}
+
+async function loadDecks() {
+  $("decks-error").textContent = "";
+  const res = await window.arena.action("decks");
+  if (res.ok) {
+    decksList = res.data;
+    renderDecks();
+  } else {
+    $("decks-summary-line").textContent = "Could not load decks.";
+    $("decks-error").textContent = res.error;
+  }
+}
+
+function renderDeckDetail(detail) {
+  const s = window.decksLogic.summarizeDeckDetail(detail);
+  $("deck-detail").classList.remove("hidden");
+  $("deck-detail-title").textContent = detail.deck_name;
+  const wc = detail.wildcard_cost || {};
+  $("deck-detail-meta").textContent =
+    (detail.archetype || "—") + " · " + (detail.format || "—") +
+    " · Tier " + (detail.tier == null ? "—" : detail.tier) +
+    " · Winrate " + detail.winrate + "%" +
+    " · " + detail.completion_percent + "% complete (" + detail.cards_owned + " / " + detail.cards_required + ")" +
+    " · Wildcards to finish: " + (wc.rare || 0) + " rare / " + (wc.mythic || 0) + " mythic" +
+    " · " + s.totalCards + " cards, " + s.cardKinds + " distinct, " + s.missingKinds + " short";
+
+  const analysisEl = $("deck-analysis");
+  analysisEl.textContent = "";
+  if (s.hasAnalysis) {
+    const a = detail.analysis;
+    const grid = document.createElement("div");
+    grid.className = "stats-grid";
+    for (const [label, value] of [
+      ["Final score", a.final_score],
+      ["Synergy", a.synergy_score],
+      ["Consistency", a.consistency_score],
+      ["Mana", a.mana_score],
+      ["Meta", a.meta_score],
+    ]) {
+      const cell = document.createElement("div");
+      const span = document.createElement("span");
+      span.textContent = value;
+      const small = document.createElement("small");
+      small.textContent = label;
+      cell.append(span, small);
+      grid.appendChild(cell);
+    }
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = "Analysis as computed and stored by the engine's deck analysis — shown exactly as served.";
+    analysisEl.append(grid, note);
+  } else {
+    const note = document.createElement("p");
+    note.className = "note";
+    note.textContent = "No stored analysis for this deck yet — it appears once the engine's deck analysis has run on it.";
+    analysisEl.appendChild(note);
+  }
+
+  const wrap = $("deck-cards-wrap");
+  wrap.textContent = "";
+  const table = document.createElement("table");
+  const head = document.createElement("tr");
+  for (const label of ["Qty", "Card", "Type", "Rarity", "Own", "Missing"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    if (["Qty", "Own", "Missing"].includes(label)) th.className = "num";
+    head.appendChild(th);
+  }
+  table.appendChild(head);
+  for (const c of detail.cards || []) {
+    const tr = document.createElement("tr");
+    const values = [
+      String(c.quantity),
+      c.name,
+      c.type_line || (c.types || []).join(" "),
+      c.rarity,
+      String(c.owned || 0),
+      String(c.missing || 0),
+    ];
+    values.forEach((text, i) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      if ([0, 4, 5].includes(i)) td.className = "num";
+      if (i === 5 && (c.missing || 0) > 0) td.classList.add("missing");
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  }
+  wrap.appendChild(table);
+}
+
+async function loadDeckDetail(deckId) {
+  $("decks-error").textContent = "";
+  const res = await window.arena.action("deck-detail", { deckId });
+  if (res.ok) {
+    renderDeckDetail(res.data);
+  } else {
+    $("decks-error").textContent = res.error;
+  }
+}
+
+$("decks-refresh-btn").addEventListener("click", loadDecks);
+
 // --- Auth (Slice 1) -----------------------------------------------------
 
 $("auth-form").addEventListener("submit", async (e) => {
@@ -174,6 +335,7 @@ $("logout-btn").addEventListener("click", async () => {
   await window.arena.action("logout");
   $("home-view").classList.add("hidden");
   $("collection-view").classList.add("hidden");
+  $("decks-view").classList.add("hidden");
   $("auth-view").classList.remove("hidden");
 });
 

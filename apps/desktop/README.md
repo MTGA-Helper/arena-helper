@@ -1,10 +1,14 @@
-# Arena Helper — Desktop (Slices 1–2)
+# Arena Helper — Desktop (Slices 1–3)
 
 Native desktop shell for Arena Helper: Electron (Windows / macOS / Linux),
 a thin client over the live engine API. Slice 1 is the shell, the engine
 connection, and auth. Slice 2 adds the collection: stats, the full list
 with a list-vs-stats reconciliation line, a name filter, and CSV
-upload/refresh. Decks and recommendations deepen in Slices 3–4.
+upload/refresh. Slice 3 adds the Decks view: the engine's ranked deck
+list with its completion math checked in the open, and a per-deck
+detail — full card list with type lines and subtypes, per-card
+owned/missing, and the stored engine analysis shown exactly as
+served. Recommendations deepen in Slice 4.
 
 ## Layout
 
@@ -18,6 +22,8 @@ upload/refresh. Decks and recommendations deepen in Slices 3–4.
   signed-in home, and the collection view.
 - `renderer/collectionLogic.js` — pure list/stats reconciliation + name
   filter, shared by the renderer and the smoke test.
+- `renderer/decksLogic.js` — pure deck parity / completion-math /
+  detail-summary logic, shared by the renderer and the smoke test.
 
 ## Run
 
@@ -38,6 +44,10 @@ ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_AUTH=1 npm run smoke
                                                 # auth round-trip — LOCAL api only, never production
 ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_DECKS=0 ARENA_SMOKE_UPLOAD=1 npm run smoke
                                                 # upload round-trip — LOCAL fixture api only (see below)
+ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_DECKS_FIXTURE=1 npm run smoke
+                                                # Slice 3 deck/detail/analysis hand-checks — LOCAL fixture api only (see below)
+ARENA_API_BASE=http://127.0.0.1:8123 ARENA_SMOKE_DECKS_FIXTURE=1 ARENA_SMOKE_NEW_DECK=1 npm run smoke
+                                                # + the newly-seeded-deck leg, after decks_fixture.py --phase2
 ```
 
 ### Local collection fixture (for the upload leg)
@@ -63,6 +73,26 @@ Fixture expectations are printed by the seed script and asserted by the
 smoke test (import counts, exact list contents, and stats — including
 rares=4 / mythics=2 for a card whose three prints span rare/mythic/rare:
 the Phase 0 canonical-print fix, hand-checked end to end).
+
+### Local decks fixture (for the Slice 3 legs)
+
+`test/decks_fixture.py` runs AFTER `test/collection_fixture.py` against
+the same scratch database (it reuses that fixture's user) and seeds two
+hand-computable decks whose stored analyses are produced by the engine's
+own `deck_analysis.analyze_decks`. Its cards carry `type_line` +
+`subtypes` exactly as the fixed seed stores them — an older fixture
+database needs `apps/api/schema_slice3_subtypes.sql` first (idempotent).
+
+```sh
+python3 apps/desktop/test/decks_fixture.py          # Deck A + analysis
+# boot the API, run the ARENA_SMOKE_DECKS_FIXTURE=1 smoke above
+python3 apps/desktop/test/decks_fixture.py --phase2 # adds Deck B + re-analyzes
+# re-run the smoke with ARENA_SMOKE_NEW_DECK=1
+```
+
+Fixture expectations are printed by the seed script and asserted by the
+smoke test: Deck A completes 71.4% with a 45.25 final analysis score —
+the value the engine's own metric definitions produce by hand.
 
 ## Status (Oct 26, 2026 — TURBO surge Day 2)
 
