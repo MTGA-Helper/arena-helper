@@ -43,15 +43,26 @@ import os
 import sys
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 # Same fixture user as test/collection_fixture.py.
 FIXTURE_USER_ID = "11111111-1111-1111-1111-111111111111"
 DASH = chr(8212)  # em-dash
 
 CARD_STATEMENTS = [
-    "DELETE FROM deck_analyses",
-    "DELETE FROM deck_cards",
-    "DELETE FROM decks",
+    # FIX (Oct 26, 2026; hub #329): the deck-table wipes are scoped to
+    # this fixture's own deck id range (fixture decks are 3001/3002),
+    # like the card/print/collection ranges below. They used to be
+    # unscoped —
+    #   "DELETE FROM deck_analyses",
+    #   "DELETE FROM deck_cards",
+    #   "DELETE FROM decks",
+    # — a full wipe of every deck row in whatever database the URL
+    # named. The allowlist in main() is the second lock on the same
+    # door; these scopes are the first.
+    "DELETE FROM deck_analyses WHERE deck_id BETWEEN 3001 AND 3999",
+    "DELETE FROM deck_cards WHERE deck_id BETWEEN 3001 AND 3999",
+    "DELETE FROM decks WHERE id BETWEEN 3001 AND 3999",
     "DELETE FROM user_collections WHERE card_id BETWEEN 2001 AND 2999",
     "DELETE FROM card_prints WHERE id BETWEEN 2101 AND 2999",
     "DELETE FROM cards WHERE id BETWEEN 2001 AND 2999",
@@ -114,6 +125,37 @@ def run_statements(engine, statements):
             conn.execute(text(stmt))
 
 
+def require_scratch_db(url, label):
+    # FIX (Oct 26, 2026; hub #329): hard allowlist, mirroring the
+    # jund_fixture guard landed earlier today. The presence checks in
+    # main() only required the URL variables to be SET (and
+    # SYNC_DATABASE_URL to mention "postgresql"), so a production URL
+    # satisfied them — and this fixture would then have wiped and
+    # re-seeded decks in production; analyze_decks() writes to
+    # DATABASE_URL as well, so BOTH URLs are allowlisted here, before
+    # a single statement runs. This fixture family's scratch target
+    # (see header) is the database 'arena_fixture' on the local
+    # scratch cluster: the /tmp unix socket or port 54329. Refuse
+    # anything else.
+    u = make_url(url)
+    db_name = u.database or ""
+    host = u.host or u.query.get("host", "")
+    port_raw = u.port or u.query.get("port", "")
+    try:
+        port = int(port_raw) if port_raw else None
+    except (TypeError, ValueError):
+        port = None
+    if not (db_name == "arena_fixture" and (host == "/tmp" or port == 54329)):
+        print(
+            f"ABORT: refusing to run the decks fixture against {label} "
+            f"database={db_name!r} host={host!r} port={port!r}. This "
+            "fixture only runs against the local scratch database "
+            "(database 'arena_fixture' on the /tmp socket or port "
+            "54329; see header). Nothing was deleted."
+        )
+        sys.exit(1)
+
+
 def main():
     phase2 = "--phase2" in sys.argv
     sync_url = os.environ.get("SYNC_DATABASE_URL")
@@ -123,6 +165,8 @@ def main():
     if not os.environ.get("DATABASE_URL"):
         print("Set DATABASE_URL too — the engine's analyze_decks reads it.")
         sys.exit(1)
+    require_scratch_db(sync_url, "SYNC_DATABASE_URL")
+    require_scratch_db(os.environ["DATABASE_URL"], "DATABASE_URL")
 
     engine = create_engine(sync_url)
     if phase2:

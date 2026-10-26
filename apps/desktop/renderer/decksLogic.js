@@ -42,7 +42,21 @@
     const missingTotal = missing.reduce((acc, c) => acc + (c.quantity || 0), 0);
     const required = deck.cards_required || 0;
     const owned = deck.cards_owned || 0;
-    return { required, owned, missingTotal, agrees: owned + missingTotal === required };
+    // FIX (Oct 26, 2026; hub #327 F1): "agrees" is only a real check
+    // when the payload actually carries the numbers being tied out.
+    // Before, a deck whose payload lacked cards_required /
+    // cards_owned / missing_cards defaulted them to 0 / 0 / [] and
+    // could "agree" vacuously (0 + 0 === 0), so the decks summary
+    // claimed a tie-out the engine never made. Absent fields now
+    // report agrees: false; the arithmetic itself is unchanged.
+    // (Pre-fix: agrees: owned + missingTotal === required, computed
+    // unconditionally.)
+    const agrees =
+      deck.cards_required != null &&
+      deck.cards_owned != null &&
+      Array.isArray(deck.missing_cards) &&
+      owned + missingTotal === required;
+    return { required, owned, missingTotal, agrees };
   }
 
   // summarizeDeckDetail(detail) -> {

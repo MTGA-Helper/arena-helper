@@ -32,19 +32,34 @@ import os
 import sys
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 FIXTURE_USER_ID = "11111111-1111-1111-1111-111111111111"
 
 STATEMENTS = [
     # Slice 5: the watcher's tables reference cards too — clear them
     # before the card wipe or the foreign key refuses it on re-runs.
-    "DELETE FROM user_deck_cards",
-    "DELETE FROM user_decks",
-    "DELETE FROM user_collections",
-    "DELETE FROM wildcard_inventories",
-    "DELETE FROM card_prints",
-    "DELETE FROM cards",
-    "DELETE FROM users",
+    # FIX (Oct 26, 2026; hub #329): every wipe below is scoped to
+    # this fixture's own id domain — the fixture user, and card/print
+    # ids below 1000 (the fixture inserts cards 1-4 and prints 101-106
+    # explicitly and parks both sequences at 1000). They used to be
+    # unscoped —
+    #   "DELETE FROM user_deck_cards", "DELETE FROM user_decks",
+    #   "DELETE FROM user_collections",
+    #   "DELETE FROM wildcard_inventories", "DELETE FROM card_prints",
+    #   "DELETE FROM cards", "DELETE FROM users",
+    # — full-table wipes of whatever database the URL named. The
+    # allowlist in main() is the second lock; these scopes are the
+    # first. user_deck_cards is keyed by deck, so it is scoped through
+    # the fixture user's own watcher decks.
+    "DELETE FROM user_deck_cards WHERE deck_id IN "
+    f"(SELECT id FROM user_decks WHERE user_id = '{FIXTURE_USER_ID}')",
+    f"DELETE FROM user_decks WHERE user_id = '{FIXTURE_USER_ID}'",
+    f"DELETE FROM user_collections WHERE user_id = '{FIXTURE_USER_ID}'",
+    f"DELETE FROM wildcard_inventories WHERE user_id = '{FIXTURE_USER_ID}'",
+    "DELETE FROM card_prints WHERE id BETWEEN 1 AND 999",
+    "DELETE FROM cards WHERE id BETWEEN 1 AND 999",
+    f"DELETE FROM users WHERE id = '{FIXTURE_USER_ID}'",
     # One fixture user; the collection routes' Phase 1 stub dependency
     # resolves "the current user" as the first user with a collection.
     "INSERT INTO users (id, email, hashed_password) VALUES "
@@ -81,10 +96,42 @@ STATEMENTS = [
 ]
 
 
+def require_scratch_db(url):
+    # FIX (Oct 26, 2026; hub #329): hard allowlist, mirroring the
+    # jund_fixture guard landed earlier today. The check in main()
+    # only required SYNC_DATABASE_URL to be SET, so a production URL
+    # satisfied it — and the statements above would then have wiped
+    # and re-seeded the collection tables in production. This
+    # fixture's scratch target (see header) is the database
+    # 'arena_fixture' on the local scratch cluster: the /tmp unix
+    # socket or port 54329. Refuse anything else, before the engine
+    # is even created.
+    u = make_url(url)
+    db_name = u.database or ""
+    host = u.host or u.query.get("host", "")
+    port_raw = u.port or u.query.get("port", "")
+    try:
+        port = int(port_raw) if port_raw else None
+    except (TypeError, ValueError):
+        port = None
+    if not (db_name == "arena_fixture" and (host == "/tmp" or port == 54329)):
+        print(
+            "ABORT: refusing to run the collection fixture against "
+            f"database={db_name!r} host={host!r} port={port!r}. This "
+            "fixture only runs against the local scratch database "
+            "(database 'arena_fixture' on the /tmp socket or port "
+            "54329; see header). Nothing was deleted."
+        )
+        return False
+    return True
+
+
 def main():
     url = os.environ.get("SYNC_DATABASE_URL")
     if not url:
         print("SYNC_DATABASE_URL is not set; refusing to guess a database.")
+        return 1
+    if not require_scratch_db(url):
         return 1
     engine = create_engine(url)
     with engine.begin() as conn:

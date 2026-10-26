@@ -229,14 +229,29 @@ async function loadDecks() {
 }
 
 function renderDeckDetail(detail) {
+  // FIX (Oct 26, 2026; hub #327 F2): bail out on a null/undefined
+  // payload before dereferencing it. summarizeDeckDetail tolerates
+  // null, but the title/meta lines below do not — a null detail threw
+  // after the panel was already unhidden, leaving a blank open panel
+  // with no error shown.
+  if (!detail) {
+    $("decks-error").textContent = "Deck detail unavailable.";
+    return;
+  }
   const s = window.decksLogic.summarizeDeckDetail(detail);
   $("deck-detail").classList.remove("hidden");
   $("deck-detail-title").textContent = detail.deck_name;
+  // FIX (Oct 26, 2026; hub #328 F3): fallbacks for the numeric meta
+  // fields, matching the "—" idiom used for archetype/format/tier in
+  // this same expression and the (x || 0) idiom in renderDecks. A
+  // partial payload rendered the literal text "undefined" /
+  // "undefined%" here before.
   $("deck-detail-meta").textContent =
     (detail.archetype || "—") + " · " + (detail.format || "—") +
     " · Tier " + (detail.tier == null ? "—" : detail.tier) +
-    " · Winrate " + detail.winrate + "%" +
-    " · " + detail.completion_percent + "% complete (" + detail.cards_owned + " / " + detail.cards_required + ")" +
+    " · Winrate " + (detail.winrate == null ? "—" : detail.winrate + "%") +
+    " · " + (detail.completion_percent == null ? "—" : detail.completion_percent + "% complete") +
+    " (" + (detail.cards_owned || 0) + " / " + (detail.cards_required || 0) + ")" +
     " · Wildcards to finish: " + window.recommendationsLogic.billText(detail.wildcard_cost) +
     " · " + s.totalCards + " cards, " + s.cardKinds + " distinct, " + s.missingKinds + " short";
 
@@ -285,11 +300,13 @@ function renderDeckDetail(detail) {
   table.appendChild(head);
   for (const c of detail.cards || []) {
     const tr = document.createElement("tr");
+    // FIX (Oct 26, 2026; hub #328 F3): name/rarity fallbacks — a card
+    // row missing either rendered the literal text "undefined".
     const values = [
       String(c.quantity),
-      c.name,
+      c.name || "—",
       c.type_line || (c.types || []).join(" "),
-      c.rarity,
+      c.rarity || "—",
       // Slice 4: the Craft column prices the missing copies at the
       // cheapest printing (the engine's craft_rarity); basics are
       // free on Arena and say so.
