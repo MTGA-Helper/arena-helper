@@ -36,9 +36,13 @@ const RUN_NEW_DECK = process.env.ARENA_SMOKE_NEW_DECK === "1";
 
 // The Phase 0 live gate's deck list (Oct 26, 2026): production's 14
 // decks, verified name-for-name. The parity leg asserts the engine
-// still serves exactly this set.
+// still serves exactly this set. (The gate summary shortened the
+// first deck to "Esika Commander"; the engine's stored name is the
+// full "Esika, God of the Tree (Commander)" — the constant uses the
+// engine's name, caught by this leg's first live run.)
 const EXPECTED_DECK_NAMES = [
-  "Esika Commander", "Rakdos Midrange", "Mono-Green Devotion",
+  "Esika, God of the Tree (Commander)", "Rakdos Midrange",
+  "Mono-Green Devotion",
   "Dimir Midrange", "Izzet Phoenix", "Mono-Red Aggro", "Azorius Auras",
   "Show and Tell Variants", "Izzet Wizards", "Boros Aggro",
   "Rakdos Vampires", "Domain Energy", "Azorius Control",
