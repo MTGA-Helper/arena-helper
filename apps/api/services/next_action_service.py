@@ -73,7 +73,9 @@ async def fetch_live_candidates():
                             })
 
     except Exception as e:
-        print(f"Error fetching live candidates: {e}")
+        import traceback
+        print(f"Error fetching live candidates: {repr(e)}")
+        traceback.print_exc()
 
     if candidates:
         return candidates
