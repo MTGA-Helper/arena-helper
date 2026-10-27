@@ -216,7 +216,7 @@
         if (!response.ok) throw new Error(result.detail || "Unable to change password.");
         message.textContent = result.message;
         message.className = "success";
-        event.currentTarget.reset();
+        document.querySelector("#password-form").reset();
       } catch (error) {
         message.textContent = error.message;
         message.className = "error";

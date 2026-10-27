@@ -22,6 +22,12 @@ export interface Match {
   game2: GameResult;
   game3: GameResult;
   matchResult: MatchResult; // calculated, not stored raw
+  constructedSeasonOrdinal: number | null;
+  constructedClass: string | null;
+  constructedLevel: number | null;
+  constructedStep: number | null;
+  constructedPercentile: number | null; // Mythic only: percentile (0-100) when not yet in the top 1800
+  constructedLeaderboardPlace: number | null; // Mythic only: 1-1800 (1 = best, ties allowed), 0/null when unranked
   eventId: string;      // e.g. "Ranked"
   importedAt: number;   // when we parsed this match
   notes: string;       // manual entry, default ''
@@ -47,7 +53,7 @@ export interface BoardCard {
   name: string;           // resolved from card DB
   power?: number;
   toughness?: number;
-  isTapped: boolean;
+  isTapped?: boolean;     // only set for battlefield cards
   counters?: Record<string, number>;
 }
 
@@ -85,7 +91,7 @@ export interface GameAction {
   gameNumber: number;
   turnNumber: number;
   /** Category of the action as reported by MTGA. */
-  type: 'CastSpell' | 'ActivateAbility' | 'TriggerAbility';
+  type: 'CastSpell' | 'PlayLand' | 'ActivateAbility' | 'TriggerAbility';
   /** True if the local player performed this action. */
   castByMe: boolean;
   /** grpId of the source card/permanent. */
@@ -290,6 +296,7 @@ export interface Session {
   pendingDeckName: string;
   pendingDeckList: DeckList;
   currentMatchId: string | null;
+  pendingRankMatchId: string | null;
   deckByEvent: Map<string, { name: string; deck: DeckList }>;
   gameEndReasonsMap: Map<string, string[]>;
   deckUsages: Map<string, { deck: DeckList; timestamp: number }>;
@@ -298,7 +305,7 @@ export interface Session {
 }
 
 export interface RawGameResult {
-  winningTeamId: number;
+  winningTeamId: number | null;
   reason: string;
 }
 

@@ -151,10 +151,25 @@ async def get_collection_stats(user_id: UUID = Depends(get_current_user_id)):
 
         wildcards = {"rare": wc.rare if wc else 0, "mythic": wc.mythic if wc else 0}
 
-        # Count rares and mythics owned using CardPrint rarity or card attributes
+        # Count rares and mythics owned, one count per owned card.
+        #
+        # FIX (Oct 26, 2026 - Phase 0 engine fixes): the previous query joined
+        # UserCollection straight to CardPrint on card_id. A card has many
+        # prints (118,527 prints / 38,906 cards), so every owned copy was
+        # summed once per print - the CardPrint fan-out that made rares
+        # (31,781) exceed total_cards (18,308) in production. The join below
+        # first picks ONE canonical print per card (its earliest print) and
+        # counts each owned card exactly once, so rarity counts can never
+        # exceed total_cards again.
+        canonical_print = (
+            select(CardPrint.card_id, func.min(CardPrint.id).label("print_id"))
+            .group_by(CardPrint.card_id)
+            .subquery()
+        )
         rarity_res = await session.execute(
             select(CardPrint.rarity, func.sum(UserCollection.quantity))
-            .join(UserCollection, CardPrint.card_id == UserCollection.card_id)
+            .join(canonical_print, canonical_print.c.card_id == UserCollection.card_id)
+            .join(CardPrint, CardPrint.id == canonical_print.c.print_id)
             .where(UserCollection.user_id == user_id)
             .group_by(CardPrint.rarity)
         )

@@ -12,6 +12,27 @@ from apps.api.models import Card, CardPrint, CardLegality
 
 logger = structlog.get_logger(__name__)
 
+def parse_type_line(type_line):
+    """Split a Scryfall type line into (base types, subtypes).
+
+    Slice 3 (TURBO surge, Oct 26, 2026) — KB gap #7: the seed used to
+    store only the left of the em-dash in Card.types, discarding every
+    subtype, so tribal analysis had nothing to read. The full line now
+    lands in Card.type_line and the right of the em-dash in
+    Card.subtypes. A line with no em-dash (e.g. "Instant") yields no
+    subtypes. Multi-face cards are read from the top-level type_line
+    only, exactly as the seed has always read them.
+    """
+    text = (type_line or "").strip()
+    if not text:
+        return [], []
+    dash_char = chr(8212)  # em-dash, as Scryfall prints it
+    if dash_char in text:
+        left, right = text.split(dash_char, 1)
+        return left.strip().split(), right.strip().split()
+    return text.split(), []
+
+
 async def seed_scryfall_cards():
     print("[+] Fetching Scryfall bulk data manifest...")
     headers = {"User-Agent": "ArenaHelperApp/1.0", "Accept": "*/*"}
@@ -78,7 +99,11 @@ async def seed_scryfall_cards():
                     pass
 
             type_line = rc.get("type_line", "")
-            base_types = type_line.split(dash_char)[0].strip().split() if dash_char in type_line else type_line.strip().split()
+            # Slice 3 fix (KB gap #7): the one-liner this replaces
+            # stored only the left of the em-dash, so subtypes never
+            # reached the database:
+            #   base_types = type_line.split(dash_char)[0].strip().split() if dash_char in type_line else type_line.strip().split()
+            base_types, subtypes = parse_type_line(type_line)
 
             # 1. Idempotent Upsert for Cards anchored on unique oracle_id
             stmt = insert(Card).values(
@@ -90,6 +115,8 @@ async def seed_scryfall_cards():
                 colors=rc.get("colors", []),
                 color_identity=rc.get("color_identity", []),
                 types=base_types,
+                type_line=type_line or None,
+                subtypes=subtypes,
                 keywords=rc.get("keywords", []),
                 released_at=released_date
             ).on_conflict_do_update(
@@ -102,6 +129,8 @@ async def seed_scryfall_cards():
                     "colors": rc.get("colors", []),
                     "color_identity": rc.get("color_identity", []),
                     "types": base_types,
+                    "type_line": type_line or None,
+                    "subtypes": subtypes,
                     "keywords": rc.get("keywords", []),
                     "released_at": released_date
                 }
@@ -116,13 +145,15 @@ async def seed_scryfall_cards():
                 scryfall_id=rc.get("id"),
                 set_code=rc.get("set", "unknown"),
                 collector_number=rc.get("collector_number", "0"),
-                rarity=rc.get("rarity", "common")
+                rarity=rc.get("rarity", "common"),
+                arena_id=rc.get("arena_id")
             ).on_conflict_do_update(
                 index_elements=['scryfall_id'],
                 set_={
                     "set_code": rc.get("set", "unknown"),
                     "collector_number": rc.get("collector_number", "0"),
-                    "rarity": rc.get("rarity", "common")
+                    "rarity": rc.get("rarity", "common"),
+                    "arena_id": rc.get("arena_id")
                 }
             )
             await session.execute(print_stmt)
