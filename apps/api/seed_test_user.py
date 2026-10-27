@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def seed_test_user():
     print("[*] Seeding Test User Collection & Wildcards...")

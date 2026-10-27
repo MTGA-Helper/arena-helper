@@ -1,7 +1,7 @@
 ﻿import asyncio
 from datetime import datetime
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def import_expanded_corpus_with_stats():
     print("[*] Starting Expanded Meta Deck Corpus Ingestion (Pipeline Validation Mode)...")

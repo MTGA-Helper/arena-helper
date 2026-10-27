@@ -1,0 +1,21 @@
+{
+  "allowScripts": {
+    "electron@33.4.11": true
+  },
+  "description": "Arena Helper native desktop app (Slices 1-5: shell + auth, collection, decks + analysis, recommendations, Arena Watcher log sync; Slice 6: packaged Alpha). Thin client over the live engine API.",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^26.18.0"
+  },
+  "main": "main.js",
+  "name": "arena-helper-desktop",
+  "private": true,
+  "scripts": {
+    "smoke": "node test/api-smoke.js",
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "version": "0.5.0-alpha.2"
+}

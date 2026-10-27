@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def generate_meta_stats():
     print("[*] Starting Meta Card Statistics Generation (Pipeline Validation)...")

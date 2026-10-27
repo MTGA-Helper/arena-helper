@@ -1,8 +1,24 @@
-﻿from fastapi import APIRouter, HTTPException, status
+import hmac
+import os
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from typing import List, Optional, Dict, Any
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
+
+
+def _require_ingest_token(token: str) -> None:
+    expected = os.environ.get("LAB_ADMIN_TOKEN", "")
+    if not expected or not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid or missing ingest token")
+
+async def require_ingest_token(x_ingest_token: str = Header(default="")) -> None:
+    # Dependency form: runs BEFORE request-body validation, so
+    # unauthenticated callers get 401 rather than schema details.
+    _require_ingest_token(x_ingest_token)
+
 
 class MatchIngestRequest(BaseModel):
     user_id: str = Field(..., description="UUID of the authenticated user")
@@ -26,13 +42,14 @@ class MatchResponse(BaseModel):
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
 
-@router.post("/ingest", response_model=MatchResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/ingest", response_model=MatchResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_ingest_token)])
 async def ingest_match(payload: MatchIngestRequest):
     async with AsyncSessionLocal() as session:
         try:
             query = text("""
                 INSERT INTO match_histories (user_id, player_id, opponent_id, deck_name, result, format)
-                VALUES (:user_id, :player_id, :opponent_id, :deck_name, :result, :format)
+                VALUES (CAST(:user_id AS uuid), :player_id, :opponent_id, :deck_name, :result, :format)
                 RETURNING id, user_id, deck_name, result, format, timestamp;
             """)
             result = await session.execute(query, {
@@ -58,10 +75,11 @@ async def ingest_match(payload: MatchIngestRequest):
             await session.rollback()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("/history", response_model=List[MatchResponse])
+@router.get("/history", response_model=List[MatchResponse],
+            dependencies=[Depends(require_ingest_token)])
 async def get_match_history(user_id: str):
     async with AsyncSessionLocal() as session:
-        query = text("SELECT id, user_id, deck_name, result, format, timestamp FROM match_histories WHERE user_id = :user_id ORDER BY timestamp DESC;")
+        query = text("SELECT id, user_id, deck_name, result, format, timestamp FROM match_histories WHERE user_id = CAST(:user_id AS uuid) ORDER BY timestamp DESC;")
         result = await session.execute(query, {"user_id": user_id})
         rows = result.fetchall()
         return [

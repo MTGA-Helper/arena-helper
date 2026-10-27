@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena Helper — Deck Lab (Pre-Alpha)</title>
+<style>
+  :root { --bg:#0d1420; --panel:#16202f; --line:#2a3a52; --text:#e8eef7; --dim:#93a5bd; --accent:#f2b233; --good:#3ecf6f; --bad:#ef6461; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 64px; }
+  h1 { font-size: 26px; margin: 8px 0 2px; }
+  h2 { font-size: 18px; margin: 0 0 10px; }
+  .sub { color: var(--dim); font-size: 14px; line-height: 1.5; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-top: 16px; }
+  button { background: var(--accent); color: #1a1405; border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
+  button.secondary { background: #243650; color: var(--text); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input[type=text], textarea { width: 100%; background: #0e1624; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px; font: inherit; }
+  textarea { min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .deck { border-top: 1px solid var(--line); padding: 12px 0; }
+  .deck:first-of-type { border-top: 0; }
+  .bar { height: 8px; background: #0e1624; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+  .bar > div { height: 100%; background: var(--good); }
+  .chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--dim); margin: 2px 3px 2px 0; }
+  .chip b { color: var(--text); }
+  .missing { color: var(--dim); font-size: 13px; line-height: 1.6; }
+  .pick { border: 1px solid var(--accent); }
+  .fineprint { color: var(--dim); font-size: 12px; line-height: 1.55; }
+  .ok { color: var(--good); } .warn { color: var(--accent); } .err { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; }
+  label.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
+  label.check input { margin-top: 3px; width: 18px; height: 18px; }
+.analysis-box { margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px; }
+    .viol { margin: 4px 0 0 16px; font-size: 12px; color: #b91c1c; }
+    .curve { margin-top: 6px; font-family: ui-monospace, monospace; font-size: 11px; }
+    .crow { display: flex; gap: 6px; align-items: baseline; }
+    .ckey { width: 14px; color: #64748b; }
+    .cbar { color: #2563eb; letter-spacing: -1px; }
+    button.analyzeBtn { background: #e2e8f0; color: #0f172a; padding: 4px 10px; font-size: 12px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Arena Helper — Deck Lab</h1>
+  <p class="sub"><b>Pre-alpha.</b> Upload your MTG Arena collection, add decklists, and see what you can build, what you're missing, and what it costs to finish — then help shape the intelligence behind the picks. Your collection and decks are stored only in this browser unless you deliberately share them below.</p>
+
+  <div class="panel">
+    <h2>1 · Your collection</h2>
+    <div class="row">
+      <input type="file" id="collectionFile" accept=".csv,.txt">
+      <button class="secondary" id="clearCollection" type="button">Clear</button>
+    </div>
+    <p class="sub" id="collectionStatus">No collection loaded. CSV with a name column and a count column (headers optional).</p>
+  </div>
+
+  <div class="panel" id="metaPanel">
+    <h2>Meta library — what the meta lets you build</h2>
+    <p class="sub" id="metaStatus">Loading the meta library…</p>
+    <div class="row">
+      <select id="metaFilter">
+        <option value="all">All decks</option>
+        <option value="0">Buildable now</option>
+        <option value="1">A few wildcards away</option>
+        <option value="2">Out of reach for now</option>
+      </select>
+      <button class="secondary" id="metaSortBurden" type="button">Closest to buildable first</button>
+    </div>
+    <div id="metaList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2 · Add a deck</h2>
+    <input type="text" id="deckName" placeholder="Deck name (e.g. Rakdos Midrange)">
+    <div style="height:8px"></div>
+    <textarea id="deckText" placeholder="Paste an Arena export here (Deck / Sideboard sections), or use the file picker below."></textarea>
+    <div class="row" style="margin-top:10px">
+      <input type="file" id="deckFile" accept=".txt,.dek">
+      <button id="addDeck" type="button">Analyze deck</button>
+      <button class="secondary" id="clearDecks" type="button">Clear decks</button>
+    </div>
+    <p class="sub" id="deckStatus"></p>
+  </div>
+
+  <div class="panel pick" id="pickPanel" style="display:none">
+    <h2>Pro Pick</h2>
+    <p id="pickBody" style="line-height:1.6; margin:0"></p>
+    <p class="fineprint">Score = 75% completion + 25% cost score. Wildcard burden weights: mythic ×3, rare ×2, uncommon ×0.5, common ×0.25. Cost score = 100 × (1 − min(burden, 50) / 50). Rarities come from the Arena Helper card database — the cheapest Arena printing of each card — with Scryfall filling any gaps.</p>
+    <div class="row">
+      <button class="secondary" id="rankCompletion" type="button">Rank by completion</button>
+      <button class="secondary" id="rankCost" type="button">Rank by cheapest to finish</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Latest winners</h2>
+    <p class="fineprint" id="winnersStatus">Loading tournament-winning decklists…</p>
+    <div id="winnersList"></div>
+  </div>
+
+  <div class="panel" id="decksPanel" style="display:none">
+    <h2>Your decks</h2>
+    <div id="deckList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Share your data with the developer</h2>
+    <label class="check">
+      <input type="checkbox" id="consentBox">
+      <span>Share my decks and collection data with the Arena Helper developer to help improve the deck recommendations.</span>
+    </label>
+    <p class="fineprint">Pre-alpha: if you check the box and send, we keep and use what you send for product development and testing. We don't sell it. You can ask for it to be removed anytime — leave a contact below and ask. If you don't check the box, nothing leaves your browser.</p>
+    <input type="text" id="contactField" placeholder="Name or contact (optional — for follow-up or removal requests)">
+    <div class="row" style="margin-top:10px">
+      <button id="sendData" type="button" disabled>Send my data to the developer</button>
+      <span class="sub" id="sendStatus">Load a collection or add a deck first.</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Backend snapshot</h2>
+    <p class="sub">The live engine's own deck verdicts (seeded demo decklists) at /recommendations/decks.</p>
+    <button class="secondary" id="loadBackend" type="button">Load backend verdicts</button>
+    <div id="backendTable" style="margin-top:10px"></div>
+  </div>
+
+  <p class="fineprint" style="margin-top:18px">Arena Helper Deck Lab · pre-alpha · Card rarities via Scryfall. Not affiliated with Wizards of the Coast.</p>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("dl_" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("dl_" + k, JSON.stringify(v)); } catch (e) {} }
+};
+let collection = store.get("collection", {});   // name(lower) -> count
+let decks = store.get("decks", []);             // {name, mainboard:[[qty,name]], sideboard:[[qty,name]]}
+let rarityCache = store.get("rarity", {});      // name(lower) -> rarity
+let rankMode = "score";
+let metaLibrary = null;   // {snapshot_date, format, decks:[{name, format, archetype, tier, source, source_url, mainboard, sideboard}]}
+
+const norm = (s) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+function parseCollectionCSV(text) {
+  const out = {};
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return out;
+  const splitLine = (l) => l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ""));
+  let nameIdx = 0, countIdx = 1, start = 0;
+  const head = splitLine(lines[0]).map(h => h.toLowerCase());
+  const ni = head.findIndex(h => ["name","card","card name"].includes(h));
+  const ci = head.findIndex(h => ["count","quantity","owned","qty","amount"].includes(h));
+  if (ni >= 0 && ci >= 0) { nameIdx = ni; countIdx = ci; start = 1; }
+  for (let i = start; i < lines.length; i++) {
+    const cells = splitLine(lines[i]);
+    if (cells.length <= Math.max(nameIdx, countIdx)) continue;
+    const n = parseInt(cells[countIdx], 10);
+    const name = cells[nameIdx];
+    if (!name || isNaN(n)) continue;
+    const key = norm(name);
+    out[key] = (out[key] || 0) + n;
+  }
+  return out;
+}
+
+function parseDeckText(text) {
+  const main = [], side = [];
+  let section = "main";
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const low = line.toLowerCase();
+    if (low === "deck" || low === "mainboard") { section = "main"; continue; }
+    if (low === "sideboard") { section = "side"; continue; }
+    if (low === "commander" || low === "companion" || low === "companionboard") continue;
+    const m = line.match(/^(\d+)\s+(.+)$/);
+    if (!m) continue;
+    const qty = parseInt(m[1], 10);
+    let name = m[2].replace(/\s*\([A-Za-z0-9]{2,5}\)\s*\S*\s*$/, "").trim();
+    (section === "side" ? side : main).push([qty, name]);
+  }
+  return { mainboard: main, sideboard: side };
+}
+
+async function preloadRarities(names) {
+  // Primary source: the Arena Helper card database (cheapest Arena printing).
+  const missing = [...new Set(names.map(norm))].filter(k => !rarityCache[k]);
+  if (!missing.length) return;
+  try {
+    const r = await fetch("/api/deck-lab/rarities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ names: missing }) });
+    if (r.ok) {
+      const j = await r.json();
+      for (const [k, v] of Object.entries(j.rarities || {})) rarityCache[k] = v;
+    }
+  } catch (e) { /* fall through to Scryfall per-card */ }
+  store.set("rarity", rarityCache);
+}
+
+async function rarityFor(name) {
+  const key = norm(name);
+  if (rarityCache[key]) return rarityCache[key];
+  try {
+    const r = await fetch("https://api.scryfall.com/cards/named?exact=" + encodeURIComponent(name));
+    if (!r.ok) throw new Error("scryfall " + r.status);
+    const j = await r.json();
+    rarityCache[key] = j.rarity || "unknown";
+  } catch (e) { rarityCache[key] = "unknown"; }
+  store.set("rarity", rarityCache);
+  return rarityCache[key];
+}
+
+const WEIGHTS = { mythic: 3, rare: 2, uncommon: 0.5, common: 0.25, unknown: 1 };
+
+async function analyze(deck) {
+  let needTotal = 0, ownedTotal = 0;
+  const missing = [];
+  for (const [qty, name] of deck.mainboard) {
+    needTotal += qty;
+    const owned = Math.min(qty, collection[norm(name)] || 0);
+    ownedTotal += owned;
+    if (owned < qty) missing.push({ name, short: qty - owned, rarity: await rarityFor(name) });
+  }
+  const completion = needTotal ? (100 * ownedTotal / needTotal) : 0;
+  const cost = { mythic: 0, rare: 0, uncommon: 0, common: 0, unknown: 0 };
+  let burden = 0;
+  for (const m of missing) { cost[m.rarity] = (cost[m.rarity] || 0) + m.short; burden += (WEIGHTS[m.rarity] || 1) * m.short; }
+  const costScore = 100 * (1 - Math.min(burden, 50) / 50);
+  const score = 0.75 * completion + 0.25 * costScore;
+  return { completion, missing, cost, burden, score };
+}
+
+async function render() {
+  const hasCollection = Object.keys(collection).length > 0;
+  const unique = Object.keys(collection).length;
+  const copies = Object.values(collection).reduce((a, b) => a + b, 0);
+  $("collectionStatus").textContent = hasCollection
+    ? `Loaded: ${unique} unique cards, ${copies} total copies. Saved in this browser.`
+    : "No collection loaded. CSV with a name column and a count column (headers optional).";
+  $("decksPanel").style.display = decks.length ? "block" : "none";
+  $("pickPanel").style.display = decks.length ? "block" : "none";
+  const list = $("deckList");
+  list.innerHTML = "";
+  await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
+  const results = [];
+  for (const deck of decks) {
+    const a = await analyze(deck);
+    results.push({ deck, a });
+  }
+  const sorted = [...results].sort((x, y) =>
+    rankMode === "cost" ? (x.a.burden - y.a.burden) || (y.a.score - x.a.score) : y.a.score - x.a.score);
+  for (const { deck, a } of sorted) {
+    const div = document.createElement("div");
+    div.className = "deck";
+    const miss = a.missing.length
+      ? a.missing.map(m => `${m.short}× ${m.name} (${m.rarity})`).join(" · ")
+      : "Nothing missing — buildable now.";
+    div.innerHTML = `<b>${deck.name}</b> — ${a.completion.toFixed(1)}% complete · score ${a.score.toFixed(1)}
+      <div class="bar"><div style="width:${a.completion.toFixed(1)}%"></div></div>
+      <span class="chip">Missing wildcards: <b>${a.cost.mythic}M ${a.cost.rare}R ${a.cost.uncommon}U ${a.cost.common}C</b></span>
+      <span class="chip">Burden <b>${a.burden.toFixed(1)}</b></span>
+      <div class="missing">${miss}</div>
+      <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+    div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(deck, div.querySelector(".analysis")));
+    list.appendChild(div);
+  }
+  if (sorted.length) {
+    const top = sorted[0];
+    $("pickBody").innerHTML = `<b>${top.deck.name}</b>${top.a.completion >= 100 ? " — <span class='ok'>Buildable now</span>" : ""} leads at <b>${top.a.score.toFixed(1)}</b> (${top.a.completion.toFixed(1)}% complete, wildcard burden ${top.a.burden.toFixed(1)}).`;
+  }
+  await renderMeta();
+  updateSendState();
+}
+
+function metaStatusOf(a) {
+  const missingTotal = a.missing.reduce((s, m) => s + m.short, 0);
+  if (missingTotal === 0) return { label: "Buildable now", cls: "ok", rank: 0 };
+  if (a.burden <= 15) return { label: "A few wildcards away", cls: "warn", rank: 1 };
+  return { label: "Out of reach for now", cls: "err", rank: 2 };
+}
+
+async function renderMeta() {
+  const box = $("metaList");
+  if (!metaLibrary) { box.innerHTML = ""; return; }
+  const decks = metaLibrary.decks || [];
+  $("metaStatus").textContent = decks.length
+    ? `${metaLibrary.format || "Standard"} meta snapshot · ${metaLibrary.snapshot_date || ""} · ${decks.length} archetypes with full 60-card lists. Upload your collection above to see what you can build.`
+    : "Meta library is empty on this server.";
+  const filter = $("metaFilter").value;
+  await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
+  const rows = [];
+  for (const d of decks) {
+    const a = await analyze(d);
+    rows.push({ d, a, st: metaStatusOf(a) });
+  }
+  rows.sort((x, y) => (x.st.rank - y.st.rank) || (x.a.burden - y.a.burden) || ((x.d.tier || 9) - (y.d.tier || 9)));
+  const buildableNow = rows.filter(r => r.st.rank === 0).length;
+  const withinReach = rows.filter(r => r.st.rank === 1).length;
+  if (Object.keys(collection).length) {
+    $("metaStatus").textContent = `${metaLibrary.format || "Standard"} meta snapshot · ${metaLibrary.snapshot_date || ""} · With your collection: ${buildableNow} of ${rows.length} decks buildable NOW with no wildcards · ${withinReach} more within a few wildcards.`;
+  }
+  box.innerHTML = "";
+  let lastGroup = -1;
+  rows.forEach(({ d, a, st }, i) => {
+    if (filter !== "all" && String(st.rank) !== filter) return;
+    const group = st.rank === 0 ? 0 : 1;
+    if (group !== lastGroup) {
+      lastGroup = group;
+      const h = document.createElement("h3");
+      h.style.margin = "14px 0 4px";
+      h.textContent = group === 0 ? "Buildable now — no wildcards needed" : "Buildable with wildcards";
+      box.appendChild(h);
+    }
+    const div = document.createElement("div");
+    div.className = "deck";
+    const miss = a.missing.length
+      ? a.missing.map(m => `${m.short}× ${m.name} (${m.rarity})`).join(" · ")
+      : "Nothing missing — every card is in your collection.";
+    div.innerHTML = `${i === 0 && st.rank === 0 ? "👑 " : ""}<b>${d.name}</b> <span class="chip">${d.archetype || ""}</span><span class="chip">Tier ${d.tier || "?"}</span>
+      <span class="chip"><b class="${st.cls}">${st.label}</b></span>
+      <div class="bar"><div style="width:${a.completion.toFixed(1)}%"></div></div>
+      <span class="chip">${a.completion.toFixed(1)}% owned</span>
+      <span class="chip">Wildcards needed: <b>${a.cost.mythic} mythic · ${a.cost.rare} rare · ${a.cost.uncommon} uncommon · ${a.cost.common} common</b></span>
+      <span class="chip">Burden <b>${a.burden.toFixed(1)}</b></span>
+      <div class="missing">${miss}</div>
+      <div class="fineprint">List source: ${d.source || "meta snapshot"}${d.source_url ? ` · <a href="${d.source_url}" target="_blank" rel="noopener">source list</a>` : ""}</div>
+      <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+    div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(d, div.querySelector(".analysis")));
+    box.appendChild(div);
+  });
+  if (!box.children.length) box.innerHTML = "<p class='sub'>No meta decks match this filter.</p>";
+}
+
+async function loadMeta() {
+  try {
+    const r = await fetch("/api/deck-lab/meta-decks");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    metaLibrary = await r.json();
+  } catch (e) {
+    $("metaStatus").textContent = "Meta library unavailable (" + e.message + ").";
+    metaLibrary = { decks: [] };
+  }
+  renderMeta();
+}
+
+function updateSendState() {
+  const hasData = decks.length > 0 || Object.keys(collection).length > 0;
+  const ok = hasData && $("consentBox").checked;
+  $("sendData").disabled = !ok;
+  $("sendStatus").textContent = !hasData
+    ? "Load a collection or add a deck first."
+    : (!$("consentBox").checked ? "Check the box above to enable the send button."
+    : "Ready — sends your decks and collection summary to the developer's database.");
+}
+
+$("collectionFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  collection = parseCollectionCSV(await f.text());
+  store.set("collection", collection);
+  render();
+});
+$("clearCollection").addEventListener("click", () => { collection = {}; store.set("collection", collection); render(); });
+$("addDeck").addEventListener("click", () => {
+  const text = $("deckText").value.trim();
+  if (!text) { $("deckStatus").textContent = "Paste a decklist first."; return; }
+  const parsed = parseDeckText(text);
+  if (!parsed.mainboard.length) { $("deckStatus").textContent = "No card lines found — expected lines like '4 Card Name'."; return; }
+  const name = $("deckName").value.trim() || ("Deck " + (decks.length + 1));
+  decks.push({ name, mainboard: parsed.mainboard, sideboard: parsed.sideboard });
+  store.set("decks", decks);
+  $("deckText").value = ""; $("deckName").value = "";
+  $("deckStatus").textContent = `Added "${name}": ${parsed.mainboard.reduce((a, c) => a + c[0], 0)} mainboard, ${parsed.sideboard.reduce((a, c) => a + c[0], 0)} sideboard.`;
+  render();
+});
+$("deckFile").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  $("deckText").value = await f.text();
+  if (!$("deckName").value) $("deckName").value = f.name.replace(/\.txt$/i, "");
+});
+$("clearDecks").addEventListener("click", () => { decks = []; store.set("decks", decks); render(); });
+$("rankCompletion").addEventListener("click", () => { rankMode = "score"; render(); });
+$("rankCost").addEventListener("click", () => { rankMode = "cost"; render(); });
+$("metaFilter").addEventListener("change", renderMeta);
+$("metaSortBurden").addEventListener("click", renderMeta);
+$("consentBox").addEventListener("change", updateSendState);
+$("sendData").addEventListener("click", async () => {
+  const unique = Object.keys(collection).length;
+  const copies = Object.values(collection).reduce((a, b) => a + b, 0);
+  const payload = {
+    consent: true,
+    contact: $("contactField").value.trim() || null,
+    summary: { uniqueCards: unique, totalCopies: copies, decks: decks.length },
+    decks: decks,
+    collection: collection,
+    source: "deck-lab-web"
+  };
+  $("sendStatus").textContent = "Sending…";
+  try {
+    const r = await fetch("/api/deck-lab/submissions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    $("sendStatus").innerHTML = `<span class="ok">Stored — submission #${j.id}. Thank you for helping test.</span>`;
+  } catch (e) {
+    $("sendStatus").innerHTML = `<span class="err">Send failed (${e.message}). Your data is still saved in this browser.</span>`;
+  }
+});
+$("loadBackend").addEventListener("click", async () => {
+  const box = $("backendTable");
+  box.innerHTML = "<p class='sub'>Loading… (a cold backend can take ~30s)</p>";
+  try {
+    const r = await fetch("/recommendations/decks");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const rows = (j.recommendations || []).map(d =>
+      `<tr><td>${d.name || ""}</td><td>${d.archetype || ""}</td><td>${d.completion_percent != null ? d.completion_percent + "%" : ""}</td><td>${d.wildcard_cost ? Object.entries(d.wildcard_cost).filter(([, v]) => v).map(([k, v]) => v + " " + k).join(", ") : ""}</td></tr>`).join("");
+    box.innerHTML = `<table><tr><th>Deck</th><th>Archetype</th><th>Completion</th><th>Wildcard cost</th></tr>${rows}</table>`;
+  } catch (e) {
+    box.innerHTML = `<p class='sub err'>Backend verdicts unavailable (${e.message}).</p>`;
+  }
+});
+render();
+function breakdownHTML(a) {
+  const b = a.breakdown;
+  const colorNames = { W: "White", U: "Blue", B: "Black", R: "Red", G: "Green" };
+  const colors = Object.entries(b.colors_by_identity).filter(([, n]) => n > 0).map(([c, n]) => `${colorNames[c]} ${n}`).join(" · ") || "Colorless";
+  const types = Object.entries(b.types).sort((x, y) => y[1] - x[1]).map(([t, n]) => `${t} ${n}`).join(" · ");
+  const curveMax = Math.max(1, ...Object.values(b.mana_curve_nonland));
+  const curve = ["0","1","2","3","4","5","6","7"].map(k => {
+    const n = b.mana_curve_nonland[k] || 0;
+    return `<div class="crow"><span class="ckey">${k}${k === "7" ? "+" : ""}</span><span class="cbar">${"▓".repeat(Math.round(14 * n / curveMax))}</span><span>${n}</span></div>`;
+  }).join("");
+  const notOnArena = a.cards.filter(c => !c.on_arena).map(c => c.name);
+  const legal = a.legality.legal
+    ? `<span class="status ok">✓ ${esc(a.format)} legal — ${a.mainboard_count} + ${a.sideboard_count}</span>`
+    : `<span class="status far">✗ Not ${esc(a.format)} legal</span><ul class="viol">${a.legality.violations.map(v => `<li>${esc(v.detail)}</li>`).join("")}</ul>`;
+  return `<div class="analysis-box">${legal}
+    <p class="fineprint" style="margin-top:6px"><strong>Colors:</strong> ${esc(colors)} &nbsp; <strong>Types:</strong> ${esc(types)}</p>
+    ${b.themes.length ? `<p class="fineprint"><strong>Themes:</strong> ${b.themes.map(esc).join(", ")}</p>` : ""}
+    ${notOnArena.length ? `<p class="fineprint"><strong>Not on MTGA:</strong> ${notOnArena.map(esc).join(", ")}</p>` : ""}
+    <div class="curve">${curve}</div></div>`;
+}
+
+async function runAnalysis(deck, target) {
+  target.innerHTML = `<p class="fineprint">Analyzing against the card database…</p>`;
+  try {
+    const r = await fetch("/api/deck-lab/analyze-deck", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ format: (deck.format || "Standard").toLowerCase(), mainboard: deck.mainboard, sideboard: deck.sideboard || [] }) });
+    if (!r.ok) throw new Error("analyze " + r.status);
+    target.innerHTML = breakdownHTML(await r.json());
+  } catch (e) { target.innerHTML = `<p class="fineprint">Analysis unavailable right now.</p>`; }
+}
+
+async function loadWinners() {
+  const box = $("winnersList");
+  try {
+    const r = await fetch("/api/deck-lab/winners");
+    if (!r.ok) throw new Error("winners " + r.status);
+    const lib = await r.json();
+    const decks = lib.decks || [];
+    if (!decks.length) { $("winnersStatus").textContent = "No winners library loaded yet."; return; }
+    $("winnersStatus").textContent = `Tournament winners · compiled ${lib.compiled_date || ""} · checked against your collection.`;
+    await preloadRarities(decks.flatMap(d => d.mainboard.map(([, n]) => n)));
+    box.innerHTML = "";
+    for (const d of decks) {
+      const a = await analyze(d);
+      const st = metaStatusOf(a);
+      const div = document.createElement("div");
+      div.className = "deck";
+      div.innerHTML = `<div class="dhead"><span class="dname">${esc(d.name)}</span><span class="status ${st.cls}">${st.label}</span></div>
+        <p class="fineprint">${esc(d.event || "")} · ${esc(d.placement || "")} · ${esc(d.pilot || "")} · ${esc(d.event_date || "")} · Completion ${a.completion.toFixed(0)}% · Wildcards ${wcText(a.cost)}</p>
+        <button type="button" class="analyzeBtn">Legality &amp; breakdown</button><div class="analysis"></div>`;
+      div.querySelector(".analyzeBtn").addEventListener("click", () => runAnalysis(d, div.querySelector(".analysis")));
+      box.appendChild(div);
+    }
+  } catch (e) { $("winnersStatus").textContent = "Winners library unavailable right now."; }
+}
+
+loadMeta();
+loadWinners();
+</script>
+</body>
+</html>

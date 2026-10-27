@@ -70,7 +70,9 @@ function buildSnapshot(
       }
 
       seen.add(obj.instanceId);
-      yield toBoardCard(obj);
+      const card = toBoardCard(obj);
+      if (!isBattlefield) delete card.isTapped;
+      yield card;
     }
   }
 
@@ -138,7 +140,9 @@ function buildSnapshot(
     for (const instanceId of zone.objectInstanceIds ?? []) {
       const obj = gameObjects.get(instanceId);
       if (!obj?.grpId) continue;
-      stack.push(toBoardCard(obj));
+      const card = toBoardCard(obj);
+      delete card.isTapped;
+      stack.push(card);
     }
   }
 
@@ -316,7 +320,7 @@ export function createBoardStateCollector(): BoardStateCollector {
     const hasTurnNum = state.turnInfo?.turnNumber !== undefined;
     const turnNum = hasTurnNum ? state.turnInfo?.turnNumber : undefined;
       if (hasTurnNum && turnNum !== undefined && turnNum !== 0 && (rawAnnotations || rawPersistentAnnotations)) {
-        const ACTION_CATEGORIES = new Set(['CastSpell', 'ActivateAbility', 'TriggerAbility']);
+        const ACTION_CATEGORIES = new Set(['CastSpell', 'PlayLand', 'ActivateAbility', 'TriggerAbility']);
         const gk = gameKey(currentMatchId, gameNumber);
 
         // Initialise or retrieve the per-game pending-actions entry.
@@ -368,7 +372,7 @@ export function createBoardStateCollector(): BoardStateCollector {
               matchId: currentMatchId,
               gameNumber,
               turnNumber: turnNum,
-              type: category as 'CastSpell' | 'ActivateAbility' | 'TriggerAbility',
+              type: category as 'CastSpell' | 'PlayLand' | 'ActivateAbility' | 'TriggerAbility',
               castByMe,
               sourceGrpId: go.grpId,
               sourceInstanceId,

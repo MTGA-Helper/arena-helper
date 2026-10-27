@@ -1,8 +1,8 @@
 ﻿import asyncio
 import sys
 from sqlalchemy.future import select
-from database import AsyncSessionLocal
-from models import User, Card, CardPrint, Deck, DeckCard, UserCollection, WildcardInventory
+from apps.api.database import AsyncSessionLocal
+from apps.api.models import User, Card, CardPrint, Deck, DeckCard, UserCollection, WildcardInventory
 
 async def run_alpha_snap(email: str, deck_name: str):
     print(f"\n==================================================")

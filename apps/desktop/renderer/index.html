@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Arena Helper</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; color: #1c1e21; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  .status { color: #444; margin-bottom: 1.5rem; }
+  .status .ok { color: #137333; font-weight: 600; }
+  .status .bad { color: #b3261e; font-weight: 600; }
+  section { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; max-width: 480px; }
+  section.wide { max-width: 720px; }
+  label { display: block; margin: 0.5rem 0 0.25rem; font-size: 0.9rem; }
+  input { width: 100%; padding: 0.45rem; box-sizing: border-box; }
+  button { margin-top: 0.75rem; padding: 0.5rem 1rem; cursor: pointer; }
+  .error { color: #b3261e; min-height: 1.2em; font-size: 0.9rem; }
+  ul { padding-left: 1.2rem; }
+  .hidden { display: none; }
+  .stats-grid { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin: 0.5rem 0; }
+  .stats-grid div span { display: block; font-size: 1.25rem; font-weight: 600; }
+  .stats-grid div small { color: #444; }
+  .agree { color: #137333; font-weight: 600; }
+  .disagree { color: #b3261e; font-weight: 600; }
+  #collection-list { max-height: 320px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; padding: 0.5rem 0.75rem; }
+  #collection-list table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  #collection-list td, #collection-list th { text-align: left; padding: 0.2rem 0.4rem; border-bottom: 1px solid #f0f0f0; }
+  #collection-list td.qty, #collection-list th.qty { text-align: right; width: 3rem; }
+  .row { display: flex; gap: 0.5rem; align-items: end; }
+  .row input { flex: 1; }
+  .note { color: #444; font-size: 0.85rem; }
+  #decks-table-wrap, #deck-cards-wrap { border: 1px solid #eee; border-radius: 6px; padding: 0.5rem 0.75rem; margin-top: 0.5rem; }
+  #decks-table-wrap table, #deck-cards-wrap table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  #decks-table-wrap td, #decks-table-wrap th, #deck-cards-wrap td, #deck-cards-wrap th { text-align: left; padding: 0.2rem 0.4rem; border-bottom: 1px solid #f0f0f0; }
+  #decks-table-wrap td.num, #decks-table-wrap th.num, #deck-cards-wrap td.num, #deck-cards-wrap th.num { text-align: right; }
+  tr.deck-row { cursor: pointer; }
+  tr.deck-row:hover { background: #f6f8fa; }
+  .missing { color: #b3261e; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>Arena Helper</h1>
+  <p class="status" id="engine-status">Checking engine…</p>
+
+  <section id="auth-view">
+    <h2>Sign in</h2>
+    <form id="auth-form">
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="username">
+      <label for="password">Password</label>
+      <input id="password" type="password" required autocomplete="current-password">
+      <div>
+        <button type="submit" id="login-btn">Sign in</button>
+        <button type="button" id="register-btn">Create account</button>
+      </div>
+      <p class="error" id="auth-error"></p>
+    </form>
+  </section>
+
+  <section id="home-view" class="hidden wide">
+    <h2 id="welcome">Signed in</h2>
+    <p id="decks-summary">Loading decks…</p>
+    <ul id="decks-list"></ul>
+    <button type="button" id="logout-btn">Sign out</button>
+  </section>
+
+  <section id="collection-view" class="hidden wide">
+    <h2>Collection</h2>
+    <div class="stats-grid">
+      <div><span id="stat-total">–</span><small>Total cards</small></div>
+      <div><span id="stat-unique">–</span><small>Unique cards</small></div>
+      <div><span id="stat-rares">–</span><small>Rares</small></div>
+      <div><span id="stat-mythics">–</span><small>Mythics</small></div>
+      <div><span id="stat-wildcards">–</span><small>Wildcards (R / M)</small></div>
+    </div>
+    <p id="collection-reconcile" class="note">Loading collection…</p>
+    <div class="row">
+      <div style="flex:1">
+        <label for="collection-search">Filter by name</label>
+        <input id="collection-search" type="search" placeholder="Start typing a card name…">
+      </div>
+      <button type="button" id="collection-refresh-btn">Refresh</button>
+      <button type="button" id="collection-upload-btn">Upload / replace from CSV…</button>
+    </div>
+    <p class="note">Uploading a CSV replaces the collection on the engine with the file's contents.</p>
+    <p id="collection-upload-result" class="note"></p>
+    <p id="collection-showing" class="note"></p>
+    <div id="collection-list"></div>
+    <p class="error" id="collection-error"></p>
+  </section>
+
+  <section id="recommendations-view" class="hidden wide">
+    <h2>Recommendations</h2>
+    <p class="note">The engine's next action for your collection — and, in any deck below, the full wildcard bill for choosing it.</p>
+    <p id="next-action-line">Loading the engine's next action…</p>
+    <ul id="next-action-reasons"></ul>
+    <p id="next-action-note" class="note"></p>
+    <button type="button" id="next-action-refresh-btn">Refresh recommendation</button>
+    <p class="error" id="recommendations-error"></p>
+  </section>
+
+  <section id="watcher-view" class="hidden wide">
+    <h2>Arena Watcher</h2>
+    <p class="note">The watcher tails your MTG Arena Player.log and syncs your deck library and wildcard counts to the engine. Your card collection is not in the log — it stays on the CSV upload above.</p>
+    <p id="watcher-status-line">Watcher status loading…</p>
+    <p id="watcher-sync-line" class="note"></p>
+    <button type="button" id="watcher-refresh-btn">Refresh watcher status</button>
+    <p class="error" id="watcher-error"></p>
+  </section>
+
+  <section id="decks-view" class="hidden wide">
+    <h2>Decks</h2>
+    <p id="decks-summary-line" class="note">Loading decks…</p>
+    <button type="button" id="decks-refresh-btn">Refresh decks</button>
+    <div id="decks-table-wrap"></div>
+    <div id="deck-detail" class="hidden">
+      <h3 id="deck-detail-title"></h3>
+      <p id="deck-detail-meta" class="note"></p>
+      <div id="deck-analysis"></div>
+      <div id="deck-cards-wrap"></div>
+    </div>
+    <p class="error" id="decks-error"></p>
+  </section>
+
+<script src="collectionLogic.js"></script>
+<script src="decksLogic.js"></script>
+<script src="recommendationsLogic.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

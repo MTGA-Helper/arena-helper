@@ -1,6 +1,6 @@
 ﻿import asyncio
 from sqlalchemy import text
-from database import AsyncSessionLocal
+from apps.api.database import AsyncSessionLocal
 
 async def generate_unlock_report():
     print("[*] Generating Deck Unlock Report V1...")
