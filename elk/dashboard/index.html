@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arena Helper — Dashboard (testing)</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0e1116; color:#e6e9ee; font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 30px 0 10px; color:#9fd1ff; }
+  .sub { color:#8b94a3; font-size: 13px; }
+  .hero { display:flex; flex-wrap:wrap; gap:14px; margin-top:18px; }
+  .card { background:#171c24; border:1px solid #262e3a; border-radius:12px; padding:16px 18px; min-width:180px; flex:1; }
+  .card-label { color:#8b94a3; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .card-big { font-size:30px; font-weight:700; margin:4px 0 2px; }
+  .card-sub { color:#aeb7c4; font-size:13px; }
+  table { width:100%; border-collapse:collapse; background:#141922; border:1px solid #262e3a; border-radius:12px; overflow:hidden; }
+  th, td { padding:9px 12px; text-align:left; font-size:14px; border-bottom:1px solid #222a36; }
+  th { color:#8b94a3; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+  tr:last-child td { border-bottom:none; }
+  td.deck { font-weight:600; }
+  tr.subtotal td { background:#1b222d; color:#c9d3e0; }
+  .win { color:#57d977; font-weight:700; }
+  .loss { color:#ff7a72; font-weight:700; }
+  .stub { border:1px dashed #4a4230; background:#1d1a12; border-radius:12px; padding:16px 18px; }
+  .stub .tag { display:inline-block; background:#4a4230; color:#ffd479; border-radius:6px; padding:2px 8px; font-size:12px; font-weight:700; letter-spacing:.04em; }
+  .stub p { color:#b8b09a; margin:10px 0 0; }
+  footer { margin-top:34px; color:#5f6875; font-size:12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Arena Helper — Dashboard</h1>
+  <div class="sub">Testing build · player <strong>owlensteed</strong> · MTGA season 94 · generated Oct 30, 2026, 4:28 PM PT from live ELK data (bo1_play_94, bot_match_94)</div>
+
+  <div class="hero">
+    <div class="card"><div class="card-label">Overall record</div>
+      <div class="card-big">2W – 1L</div>
+      <div class="card-sub">66.7% winrate · 3 matches</div></div>
+    <div class="card"><div class="card-label">Current rank</div>
+      <div class="card-big">Platinum 3 (step 1)</div>
+      <div class="card-sub">Rank score 79 · from latest match</div></div>
+  </div>
+
+  <h2>Winrate by format</h2>
+  <div class="hero"><div class="card"><div class="card-label">Bo1 Play</div>
+      <div class="card-big">0.0%</div>
+      <div class="card-sub">0W – 1L · 1 match</div></div>
+<div class="card"><div class="card-label">Bot Match</div>
+      <div class="card-big">100.0%</div>
+      <div class="card-sub">2W – 0L · 2 matches</div></div></div>
+
+  <h2>Per-deck by format</h2>
+  <table>
+    <thead><tr><th>Deck</th><th>Format</th><th>Matches</th><th>W–L</th><th>Winrate</th></tr></thead>
+    <tbody><tr><td class="deck">(Unknown deck)</td><td>Bot Match</td><td>1</td><td>1–0</td><td>100.0%</td></tr><tr class="subtotal"><td class="deck">(Unknown deck) — all formats</td><td></td><td>1</td><td>1–0</td><td>100.0%</td></tr>
+<tr><td class="deck">Mono-White Auras (7)</td><td>Bo1 Play</td><td>1</td><td>0–1</td><td>0.0%</td></tr>
+<tr><td class="deck">Mono-White Auras (7)</td><td>Bot Match</td><td>1</td><td>1–0</td><td>100.0%</td></tr><tr class="subtotal"><td class="deck">Mono-White Auras (7) — all formats</td><td></td><td>2</td><td>1–1</td><td>50.0%</td></tr></tbody>
+  </table>
+
+  <h2>Matches</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Deck</th><th>Opponent</th><th>Event</th><th>Result</th><th>Rank</th></tr></thead>
+    <tbody><tr>
+      <td>Oct 30, 3:00 PM PT</td>
+      <td class="deck"></td>
+      <td>Sparky</td>
+      <td>Bot Match</td>
+      <td class="win">Win</td>
+      <td>Platinum 3 (step 1)</td>
+    </tr>
+<tr>
+      <td>Oct 30, 6:19 AM PT</td>
+      <td class="deck">Mono-White Auras (7)</td>
+      <td>Sparky</td>
+      <td>Bot Match</td>
+      <td class="win">Win</td>
+      <td>Platinum 3 (step 2)</td>
+    </tr>
+<tr>
+      <td>Oct 30, 6:03 AM PT</td>
+      <td class="deck">Mono-White Auras (7)</td>
+      <td>Ashion</td>
+      <td>Bo1 Play</td>
+      <td class="loss">Loss</td>
+      <td>Platinum 3 (step 2)</td>
+    </tr></tbody>
+  </table>
+
+  <h2>Counterfactual Coach</h2>
+  <div class="stub">
+    <span class="tag">STUB — NOT BUILT YET</span>
+    <p><strong>Next layer — needs full game-state reconstruction.</strong> The idea (Matt, Oct 30): replay a finished match and show the alternative line — "if you had done this instead of that, you might have lasted a turn longer and possibly have won." This panel is a placeholder for that feature. No analysis is shown here because the reconstruction engine does not exist yet — nothing on this page is simulated or invented.</p>
+  </div>
+
+  <footer>Arena Helper testing dashboard · data: local Elasticsearch *_94 indices (3 match docs) · page generated locally by elk/dashboard/generate-dashboard.mjs · Kibana remains the query-testing rig; this page previews the product shape.</footer>
+</main>
+</body>
+</html>
