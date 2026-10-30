@@ -127,7 +127,7 @@ services:
       - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
       - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
     mem_limit: ${KB_MEM_LIMIT}
-    restart: unless-stopped
+    # duplicate restart key removed 2026-10-30 (identical value at line 119; strict YAML parsers reject duplicate keys)
     healthcheck:
       test:
         [
